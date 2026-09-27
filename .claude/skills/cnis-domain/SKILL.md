@@ -5,15 +5,32 @@ description: Nexo domain knowledge for the CNIS extract. Covers the expected PDF
 
 # CNIS domain
 
-## 1. Expected layout `[VALIDAR against real PDFs]`
-The CNIS (Cadastro Nacional de Informações Sociais) extract usually has:
-- **Filiado identification:** NIT, CPF, name, birth date, mother's name.
-- **Relações previdenciárias** (one per vínculo): Seq., NIT, employer code/CNPJ, vínculo origin, filiado type in the vínculo, start date, end date, last remuneration, indicators.
-- **Remunerações** per vínculo: competência (MM/AAAA), amount, indicators.
-- **Contribuições** (contribuinte individual / facultativo): competência, payment date, contribution, salário de contribuição, indicators.
-- An indicator legend at the end.
+## 1. Layout
+Observed in public model extracts: UNILAB 2019 (the real text layout with personal data blanked), UFBA 2017 (filled with fake data) and IF Sudeste 2014 (the older "CNIS Cidadão" issue). They're kept locally in `fixtures/real/`, never committed. **No full real extract has been validated yet**, so anything below marked `[VALIDAR]` is unconfirmed.
 
-The layout varies between issues. **Never assume fixed column positions.** Anchor on section headers and on patterns: dates `dd/MM/yyyy`, competências `MM/yyyy`, amounts `1.234,56`. Use `pdfjs-dist` text items (they carry x/y transforms) to rebuild lines with page and line numbers.
+**On every page:**
+- Header: `INSS - INSTITUTO NACIONAL DO SEGURO SOCIAL` / `CNIS - Cadastro Nacional de Informações Sociais` / `Extrato Previdenciário`, plus the issue timestamp `dd/MM/yyyy HH:mm:ss` and `Página N de M`.
+- `Identificação do Filiado` is **repeated on every page**: `NIT:`, `CPF:`, `Nome:`, `Data de nascimento:`, `Nome da mãe:`, as label:value pairs, two or three per line.
+- Footer: `O INSS poderá rever a qualquer tempo as informações constantes deste extrato, conforme art. 19, § 3° do Decreto 3.048/99.`
+
+Page chrome is *recognised* text (it produces a `recognised: header` record), not an `UnparsedFragment`, and it's never silently skipped either.
+
+**`Relações Previdenciárias`:** each vínculo is a block that **repeats its own column-header row**. There are two variants:
+- Employment or contribution: `Seq. | NIT | Código Emp.* | Origem do Vínculo | Data Início | Data Fim | Tipo Filiado no Vínculo | Últ. Remun. | Indicadores`. \*The 2017 issue calls it `CNPJ/CEI/CPF`. Origem holds the employer name, `Tipo Filiado` holds e.g. `Empregado`, `Últ. Remun.` is `MM/yyyy`, and Indicadores is e.g. `PEXT`.
+- Benefit: `Seq. | NIT | NB | Origem do Vínculo | Espécie | Data Início | Data Fim | Situação`, e.g. `Benefício`, `80 - AUXILIO SALARIO MATERNIDADE`, `CESSADO`. Whether and how benefit periods count toward contribution time is a **domain question**: mark them `REVISAR` and ask. Don't invent a rule.
+- `Data Fim` can be empty (a vínculo with no end date, see §4).
+
+**`Remunerações`** sits under an employment block. It's a grid of **repeated triplets** `Competência | Remuneração | Indicadores`, three per text line. The 2014 issue adds `Agentes Nocivos` to each triplet. The reading order across the grid differs between issues, so **don't depend on order**: every competência identifies itself (`MM/yyyy`). Parse every triplet on a line and sort afterwards.
+
+**`Contribuições`** (contribuinte individual / facultativo): `Competência | Data Pgto. | Contribuição | Salário Contribuição | Indicadores` `[VALIDAR, not seen in the samples]`.
+
+**Last page:**
+- `Legenda de Indicadores`: a two-column table `Indicador | Descrição | Indicador | Descrição`, where descriptions **wrap across lines** (e.g. `PREM-EXT` = `Remuneração informada fora do prazo, passível de comprovação`).
+- Then an authenticity note: `Você pode conferir a autenticidade do documento em https://meu.inss.gov.br/central/#/autenticidade com o código <CODE>`.
+
+**Formats:** dates `dd/MM/yyyy`, competências `MM/yyyy`, amounts `1.234,56`.
+
+**Never assume fixed column positions.** Anchor on section and header-row text and on these patterns. Use `pdfjs-dist` text items (they carry x/y transforms) to rebuild lines with page and line numbers. Map values to header columns by x-overlap with that block's own header row.
 
 ## 2. Parser contract
 `parseCnis(bytes) → CnisExtraction` is pure and deterministic, with no DB access and no LLM. The result is raw, before any interpretation:
