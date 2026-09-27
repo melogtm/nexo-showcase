@@ -11,6 +11,12 @@ updates:
       # @types/node tracks the Node major we run on (engines: >=22), not the latest one.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # Blocked upstream: eslint-config-next's eslint-plugin-react crashes on ESLint 10. Drop when next ships a fix.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      # Blocked upstream: typescript-eslint supports TS <6.1 only. Drop when it supports TS 7.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
