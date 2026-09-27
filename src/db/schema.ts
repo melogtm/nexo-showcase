@@ -1,5 +1,6 @@
-import { bigint, customType, index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { bigint, customType, date, index, integer, jsonb, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 import type { CnisExtraction } from "@/cnis/parse";
+import type { Resultado, RuleVersion, ScenarioInput, TrailNode } from "@/scenarios/evaluate";
 
 const bytea = customType<{ data: Uint8Array }>({ dataType: () => "bytea" });
 
@@ -39,3 +40,34 @@ export const manualEdit = pgTable(
   },
   (t) => [index("manual_edit_analysis_idx").on(t.analysisId)],
 );
+
+/** A rule's parameters, versioned. Rows are never updated or deleted (DB trigger); a new number = a new version. */
+export const ruleVersion = pgTable(
+  "rule_version",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    ruleCode: text("rule_code").notNull(),
+    version: integer().notNull(),
+    nome: text().notNull(),
+    validFrom: date("valid_from").notNull(),
+    validTo: date("valid_to"),
+    legalBasis: text("legal_basis").notNull(),
+    parameters: jsonb().notNull(),
+    logicVersion: integer("logic_version").notNull(),
+    contentHash: text("content_hash").notNull(),
+  },
+  (t) => [unique().on(t.ruleCode, t.version)],
+);
+
+/** One scenario calculation with its frozen inputs, so it can be re-executed and compared (H2). Append-only. */
+export const calculationRun = pgTable("calculation_run", {
+  id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  analysisId: bigint("analysis_id", { mode: "number" }).notNull().references(() => analysis.id),
+  pdfSha256: text("pdf_sha256").notNull(),
+  referenceDate: date("reference_date").notNull(),
+  timelineSnapshot: jsonb("timeline_snapshot").$type<ScenarioInput>().notNull(),
+  ruleVersions: jsonb("rule_versions").$type<Pick<RuleVersion, "id" | "contentHash" | "logicVersion">[]>().notNull(),
+  result: jsonb().$type<Resultado[]>().notNull(),
+  trail: jsonb().$type<Record<string, TrailNode>>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

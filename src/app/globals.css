@@ -224,3 +224,19 @@ details summary { cursor: pointer; color: var(--red); font-size: 0.85rem; font-w
 .two-col { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .plain { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; font-size: 0.9rem; }
 td.wrap { white-space: normal; min-width: 12ch; }
+
+/* Scenarios */
+.cta { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+@media (max-width: 700px) { .cta { grid-template-columns: minmax(0, 1fr); } }
+.scenarios { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-items: start; }
+.scenario { border-top: 3px solid var(--line); display: grid; gap: 0.5rem; }
+.scenario .eyebrow { margin: 0; color: var(--muted); }
+.scenario-title { font: 400 1.6rem/1.1 var(--font-serif), Georgia, serif; margin: 0; }
+.scenario-verdict { margin: 0; font-weight: 700; }
+.scenario.is-yes { border-top-color: var(--chart-union); }
+.scenario.is-later { border-top-color: var(--red); }
+.scenario.is-later .scenario-verdict { color: var(--red); }
+.scenario.is-na { opacity: 0.75; }
+.requisitos { list-style: none; margin: 0.25rem 0 0; padding: 0; display: grid; gap: 0.6rem; }
+.requisitos li { display: grid; grid-template-columns: 1.2rem 1fr; gap: 0.4rem; font-size: 0.9rem; }
+.requisitos .falta > span { color: var(--red); }

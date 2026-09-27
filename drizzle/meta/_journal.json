@@ -29,6 +29,20 @@
       "when": 1790479600213,
       "tag": "0003_seed_indicators",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790480965396,
+      "tag": "0004_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790480966402,
+      "tag": "0005_seed_rules",
+      "breakpoints": true
     }
   ]
 }

@@ -46,6 +46,35 @@ type TrailNode = { label: string; value?: string; source?: SourceRef; editIds?: 
                    rule?: { code: string; version: number; param?: string }; children?: TrailNode[] };
 ```
 
-## 6. Stretch (only after stages 2–5 are green)
+## 6. As built (stage 4)
+- `src/rules/core.ts`: `RuleContext` and the measuring helpers (`tempoDias`, `carenciaMeses`, `idadeMeses`, `idadeDias`), shared by every rule. Changing their output changes old runs, so the reproducibility test must stay green.
+  - `Requisito` holds **numbers plus a unit**. Formatting happens only in the UI, so re-runs compare exactly.
+  - `canonicalJson` / `contentHash` also live here.
+- `src/rules/ec103-art{15,16,17,19,20}.v1.ts` plus `registry.ts` (`ruleKey(code, logicVersion)`). Rule codes:
+  - `EC103_ART19_PERMANENTE`
+  - `EC103_ART15_PONTOS`
+  - `EC103_ART16_IDADE_PROGRESSIVA`
+  - `EC103_ART17_PEDAGIO_50`
+  - `EC103_ART20_PEDAGIO_100`
+- `src/scenarios/evaluate.ts` (pure):
+  - `scenarioInput(extraction, timeline, sexoEditIds)` builds the frozen snapshot: counted time intervals, carência, birth date with its source, sexo, and the OK períodos for the trail.
+  - `evaluate(input, versions, referencia)` checks every version's hash, runs each rule for today, projects the eligibility date (month ends, then days; 60-year horizon), and builds the trail.
+- `src/scenarios/store.ts`:
+  - `activeRuleVersions(ref)`: the latest version in force on that date.
+  - `createRun`.
+  - `rerun(runId)`: loads versions by stored id, refuses on a hash or logic mismatch, and compares canonical JSON.
+- Seeds are in `drizzle/0005_seed_rules.sql`, with the `[VALIDAR]` reading of each article above its row.
+  - Every rule also requires **180 months of carência**.
+  - `diasPorAno: 365` converts years of contribution to days.
+  - The art. 17 cut-off test is strict: less than 2 years missing.
+- `rule_version` and `calculation_run` have the `append_only()` trigger.
+- Tests (`src/scenarios/scenarios.test.ts`):
+  - rule logic uses **fixture** parameters, never the legal ones;
+  - the projection is checked for minimality;
+  - the seeded hashes are verified;
+  - a stored run reproduces exactly after a new version is inserted;
+  - an altered stored result is detected.
+
+## 7. Stretch (only after stages 2–5 are green)
 1. RMI: the average of 100% of salaries since 07/1994, corrected by INPC (index table loaded from CSV), with a coefficient of 60% + 2% per year above the threshold `[VALIDAR]`. This is where a decimal library earns its place (index factors). Until then, integer centavos are enough.
 2. A petition draft from a template, filled with the chosen scenario's values and citing the trail. An LLM is allowed here, and only here.
