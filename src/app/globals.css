@@ -103,7 +103,6 @@ input {
   color: var(--ink); background: var(--paper);
   border: 1px solid var(--line); border-radius: 4px;
 }
-input[type="file"] { padding: 0.5rem; }
 input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 .button {
   justify-self: start;
@@ -117,6 +116,26 @@ input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid 
 .button:disabled { opacity: 0.6; cursor: progress; }
 .link-button { font: inherit; font-size: 0.9rem; color: var(--muted); background: none; border: 0; cursor: pointer; text-decoration: underline; }
 .error { color: var(--red); font-weight: 600; margin: 0; }
+
+/* File drop zone: the transparent native input sits on top of the styled box. */
+.dropzone {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem;
+  min-height: 150px; padding: 1.25rem;
+  text-align: center; font-weight: 400;
+  color: var(--muted);
+  background: var(--paper);
+  border: 1.5px dashed var(--line); border-radius: 4px;
+  transition: border-color 120ms, background-color 120ms, color 120ms;
+}
+.dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.dropzone:hover, .dropzone.is-dragging, .dropzone:focus-within { border-color: var(--red); color: var(--red); }
+.dropzone.is-dragging { background: color-mix(in srgb, var(--red) 6%, var(--paper)); }
+.dropzone:focus-within { outline: 2px solid var(--red); outline-offset: 2px; }
+.dropzone.has-file { border-style: solid; color: var(--red); }
+.dropzone-text { display: grid; gap: 0.15rem; font-size: 0.9rem; }
+.dropzone-text strong { color: var(--ink); font-weight: 600; word-break: break-all; }
+.dropzone-text .muted { font-size: 0.8rem; }
 
 /* Table */
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
