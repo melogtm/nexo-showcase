@@ -6,7 +6,7 @@ import { ScenarioError, createRun, rerun } from "@/scenarios/store";
 
 export type CalcState = { error?: string };
 
-export async function calcular(analysisId: number, _prev: CalcState): Promise<CalcState> {
+export async function calcular(analysisId: number): Promise<CalcState> {
   let runId: number;
   try {
     // The reference date is "today" in Brazil; everything after it is projection.
@@ -20,7 +20,7 @@ export async function calcular(analysisId: number, _prev: CalcState): Promise<Ca
 
 export type RerunState = { identical?: boolean; error?: string };
 
-export async function reexecutar(runId: number, _prev: RerunState): Promise<RerunState> {
+export async function reexecutar(runId: number): Promise<RerunState> {
   try {
     return { identical: (await rerun(runId)).identical };
   } catch (e) {

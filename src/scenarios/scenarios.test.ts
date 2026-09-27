@@ -53,6 +53,17 @@ describe("rule logic (fixture parameters)", () => {
     expect(far).toMatchObject({ aplicavel: false, elegivelHoje: false, dataProjetada: null });
   });
 
+  test("art. 17 v2 reports the cut-off condition as a numeric requirement (same parameters, same verdicts as v1)", () => {
+    const v2 = { ...FIXTURES.art17, id: 6, version: 2, logicVersion: 2 };
+    const close = run1(person("F", "2014-07-01", "2020-12-31"), v2, "2021-01-01");
+    const far = run1(person("F", "2016-07-01", "2020-12-31"), v2, "2021-01-01");
+    expect(far).toMatchObject({ aplicavel: false, elegivelHoje: false, dataProjetada: null });
+    expect(far.requisitos).toEqual([{ id: "corte", label: "Tempo que faltava na data de corte", unidade: "dias", exigido: 2 * 360, atual: 5 * 360 - 730, atendido: false, param: "faltaMaximaAnosNaDataCorte", comparacao: "maximo" }]);
+    const v1close = run1(person("F", "2014-07-01", "2020-12-31"), FIXTURES.art17, "2021-01-01");
+    expect(close.requisitos.slice(1)).toEqual(v1close.requisitos);
+    expect([close.elegivelHoje, close.dataProjetada]).toEqual([v1close.elegivelHoje, v1close.dataProjetada]);
+  });
+
   test("art. 20 adds 100% of what was missing on the cut-off date", () => {
     const r = run1(person("F", "2014-07-01", "2020-12-31"), FIXTURES.art20, "2021-01-01");
     expect(r.requisitos.find((q) => q.id === "tempo")?.exigido).toBe(5 * 360 + (5 * 360 - 1461));

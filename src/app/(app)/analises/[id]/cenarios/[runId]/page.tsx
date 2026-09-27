@@ -1,76 +1,119 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { brDate, brDuracao, brNumber } from "@/format";
-import type { Requisito } from "@/rules/core";
-import type { Resultado } from "@/scenarios/evaluate";
-import { getRun } from "@/scenarios/store";
+import { brDate } from "@/format";
+import type { Resultado, RuleVersion, TrailNode } from "@/scenarios/evaluate";
+import { earliest, humanize, inDisplayOrder, paramValue, requirementText, verdict } from "@/scenarios/present";
+import { loadRunView } from "@/scenarios/store";
 import { ReexecutarButton } from "../buttons";
-
-const pontos = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-function show(unidade: Requisito["unidade"], n: number) {
-  if (unidade === "dias") return `${brDuracao(n)} (${brNumber(n)} dias)`;
-  if (unidade === "meses") return `${n} meses`;
-  if (unidade === "idadeMeses") return `${Math.floor(n / 12)} anos${n % 12 ? ` e ${n % 12} meses` : ""}`;
-  return `${pontos.format(n)} pontos`;
-}
 
 export default async function ScenariosPage({ params }: { params: Promise<{ id: string; runId: string }> }) {
   const { id, runId } = await params;
-  const run = Number.isSafeInteger(Number(runId)) ? await getRun(Number(runId)) : undefined;
-  if (!run || run.analysisId !== Number(id)) notFound();
+  const view = await loadRunView(Number(id), Number(runId));
+  if (!view) notFound();
+  const { run, analysis, versions } = view;
+  const first = earliest(run.result);
+  const reportUrl = `/analises/${analysis.id}/cenarios/${run.id}/relatorio`;
 
   return (
     <>
-      <p className="muted"><Link href={`/analises/${run.analysisId}`}>← Revisão da linha do tempo</Link></p>
+      <p className="muted"><Link href={`/analises/${analysis.id}`}>← Revisão da linha do tempo</Link></p>
       <section className="hero">
         <h1 className="display">
-          Cenários
-          <em>em {brDate(run.referenceDate)}.</em>
+          {analysis.clientLabel}
+          <em>cenários em {brDate(run.referenceDate)}.</em>
         </h1>
-        <p className="lede">Elegibilidade hoje e data projetada supondo contribuição contínua a partir de hoje. Cálculo nº {run.id}, com as versões de regra registradas.</p>
+        <p className="lede">
+          Elegibilidade hoje e data projetada supondo contribuição contínua a partir de hoje. Clique em qualquer número para ver de onde ele vem.
+        </p>
       </section>
+
       <div className="stack-lg">
-        <ReexecutarButton runId={run.id} />
+        {first && (
+          <p className="highlight">
+            Regra atingida mais cedo: <strong>{first.nome}</strong>, {verdict(first).text.toLowerCase()}.{" "}
+            <span className="muted">Mais cedo não quer dizer mais vantajoso: o valor do benefício ainda não é calculado.</span>
+          </p>
+        )}
+        <div className="toolbar">
+          <ReexecutarButton runId={run.id} />
+          <a className="button button-quiet" href={reportUrl} target="_blank" rel="noopener">Abrir relatório</a>
+          <a className="button button-quiet" href={`${reportUrl}?download`}>Baixar .html</a>
+        </div>
         <div className="scenarios">
-          {run.result.map((r) => (
-            <Scenario key={r.ruleCode} r={r} referencia={run.referenceDate} />
+          {inDisplayOrder(run.result).map((r) => (
+            <Scenario key={r.ruleCode} r={r} trail={run.trail[r.ruleCode]} version={versions.get(r.ruleVersionId)} analysisId={analysis.id} />
           ))}
         </div>
-        <p className="muted small">Parâmetros das regras são premissas do projeto a partir da EC 103/2019 [VALIDAR]. Não é aconselhamento jurídico.</p>
+        <p className="muted small">
+          Cálculo nº {run.id}. Guarda os insumos e as versões de regra usadas, por isso pode ser reexecutado com resultado idêntico. Parâmetros das regras são premissas do
+          projeto a partir da EC 103/2019 [VALIDAR]; não é aconselhamento jurídico.
+        </p>
       </div>
     </>
   );
 }
 
-function Scenario({ r, referencia }: { r: Resultado; referencia: string }) {
-  const verdict = !r.aplicavel
-    ? { cls: "is-na", text: "Não se aplica" }
-    : r.elegivelHoje
-      ? { cls: "is-yes", text: "Elegível hoje" }
-      : r.dataProjetada
-        ? { cls: "is-later", text: `Elegível em ${brDate(r.dataProjetada)}` }
-        : { cls: "is-na", text: "Fora do horizonte de 60 anos" };
+function Scenario({ r, trail, version, analysisId }: { r: Resultado; trail?: TrailNode; version?: RuleVersion; analysisId: number }) {
+  const v = verdict(r);
   return (
-    <section className={`card scenario ${verdict.cls}`}>
+    <section className={`card scenario is-${v.kind}`}>
       <p className="eyebrow">{r.legalBasis} · v{r.version}</p>
       <h2 className="scenario-title">{r.nome}</h2>
-      <p className="scenario-verdict">{verdict.text}</p>
+      <p className="scenario-verdict">{v.text}</p>
       {r.motivo && <p className="muted small">{r.motivo}</p>}
-      {r.requisitos.length > 0 && (
-        <ul className="requisitos">
-          {r.requisitos.map((q) => (
+      <ul className="requisitos">
+        {r.requisitos.map((q, i) => {
+          const node = trail?.children?.[i]?.label === q.label ? trail.children[i] : undefined;
+          const param = version ? paramValue(version.parameters, q.param) : undefined;
+          return (
             <li key={q.id} className={q.atendido ? "ok" : "falta"}>
               <span aria-hidden="true">{q.atendido ? "✓" : "✗"}</span>
               <div>
                 <strong>{q.label}</strong>
-                <div className="small">
-                  {show(q.unidade, q.atual)} <span className="muted">de {show(q.unidade, q.exigido)} em {brDate(referencia)}</span>
-                </div>
+                <details className="trail">
+                  <summary>{requirementText(q)}</summary>
+                  <p className="small muted">
+                    Parâmetro <code>{q.param}</code>
+                    {param !== undefined && typeof param !== "object" && <> = <strong>{String(param)}</strong></>} · {r.nome} v{r.version}
+                  </p>
+                  {node?.children && node.children.length > 0 && <TrailList nodes={node.children} analysisId={analysisId} />}
+                </details>
               </div>
             </li>
-          ))}
-        </ul>
-      )}
+          );
+        })}
+      </ul>
     </section>
+  );
+}
+
+function TrailList({ nodes, analysisId }: { nodes: TrailNode[]; analysisId: number }) {
+  return (
+    <ul className="trail-list">
+      {nodes.map((n) => (
+        <li key={`${n.label}-${n.value}`}>
+          <span>{n.label}</span>
+          {n.value && <span className="muted"> · {humanize(n.value)}</span>}
+          {n.source && (
+            <div className="small muted">
+              CNIS p. {n.source.page}, l. {n.source.line}: <code>{n.source.rawText}</code>
+            </div>
+          )}
+          {n.editIds && n.editIds.length > 0 && (
+            <div className="small">
+              Alterado por{" "}
+              {n.editIds.map((e, i) => (
+                <span key={e}>
+                  {i > 0 && ", "}
+                  {/* Plain <a>: a full navigation, so the history row becomes :target and is highlighted. */}
+                  <a href={`/analises/${analysisId}#edit-${e}`}>edição nº {e}</a>
+                </span>
+              ))}
+            </div>
+          )}
+          {n.children && n.children.length > 0 && <TrailList nodes={n.children} analysisId={analysisId} />}
+        </li>
+      ))}
+    </ul>
   );
 }

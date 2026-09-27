@@ -75,6 +75,21 @@ type TrailNode = { label: string; value?: string; source?: SourceRef; editIds?: 
   - a stored run reproduces exactly after a new version is inserted;
   - an altered stored result is detected.
 
-## 7. Stretch (only after stages 2–5 are green)
+## 7. Worked example: a logic change (stage 5, art. 17)
+v1 reported "not applicable" as a sentence with raw day counts. The fix changed the rule's output, so:
+1. `ec103-art17.v1.ts` was left **untouched**.
+2. `ec103-art17.v2.ts` was added. It uses the same parameters and reports the cut-off as a `Requisito` with `comparacao: "maximo"`.
+3. `EC103_ART17_PEDAGIO_50@2` was added to the registry.
+4. `drizzle/0006_art17_v2.sql` inserts version 2 with the same parameters and `content_hash`, and `logic_version = 2`.
+
+New runs now pick v2; old runs still re-execute with v1. Follow the same procedure for any future behaviour change.
+
+## 8. Presentation (stage 5)
+- `src/scenarios/present.ts` is shared by the page and the report: display order (permanent rule first), `requirementText`, `verdict`, `earliest` ("atingida mais cedo", which is not "most advantageous" because RMI isn't computed), `humanize` for trail values (it merges consecutive ranges), and `paramValue`.
+- `src/scenarios/report.ts`: `renderReport`, a self-contained HTML page. **Every interpolated value goes through `esc()`**; tested.
+- The report is served by `.../cenarios/[runId]/relatorio` (`?download` makes it an attachment) with `Cache-Control: private, no-store`.
+- The scenarios page shows each requirement in a `<details>` holding its trail: the parameter and its value, the periods with their CNIS page/line/raw text, and links to the edits (`/analises/:id#edit-N`, highlighted through `:target`).
+
+## 9. Stretch (only after stages 2–5 are green)
 1. RMI: the average of 100% of salaries since 07/1994, corrected by INPC (index table loaded from CSV), with a coefficient of 60% + 2% per year above the threshold `[VALIDAR]`. This is where a decimal library earns its place (index factors). Until then, integer centavos are enough.
 2. A petition draft from a template, filled with the chosen scenario's values and citing the trail. An LLM is allowed here, and only here.

@@ -43,6 +43,13 @@
       "when": 1790480966402,
       "tag": "0005_seed_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790481726626,
+      "tag": "0006_art17_v2",
+      "breakpoints": true
     }
   ]
 }

@@ -225,7 +225,7 @@ function History({ edits, labelOf }: { edits: Edit[]; labelOf: (target: string) 
           <thead><tr><th>Quando</th><th>Quem</th><th>Onde</th><th>Campo</th><th>Antes</th><th>Depois</th><th>Justificativa</th></tr></thead>
           <tbody>
             {edits.map((e) => (
-              <tr key={e.id}>
+              <tr key={e.id} id={`edit-${e.id}`}>
                 <td>{dateTime.format(e.editedAt)}</td>
                 <td>{e.editedBy}</td>
                 <td>{labelOf(e.target)}</td>

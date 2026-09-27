@@ -131,7 +131,7 @@ function ruleTrail(input: ScenarioInput, v: RuleVersion, requisitos: Requisito[]
       children:
         r.id === "idade"
           ? [{ label: "Data de nascimento", value: input.nascimento!.value, source: input.nascimento!.source }, { label: "Sexo", value: input.sexo!, ...(input.sexoEditIds.length ? { editIds: input.sexoEditIds } : {}) }]
-          : r.id === "tempo" || r.id === "pontos"
+          : r.id === "tempo" || r.id === "pontos" || r.id === "corte"
             ? periodNodes
             : r.id === "carencia"
               ? [{ label: "Competências válidas", value: String(input.carencia.length) }]

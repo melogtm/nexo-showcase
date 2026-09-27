@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { canonicalJson } from "@/rules/core";
+import { getAnalysis } from "@/ingestion/ingest";
 import { loadReview } from "@/timeline/review";
 import { type RuleVersion, evaluate, missingInputs, scenarioInput } from "./evaluate";
 
@@ -49,6 +50,12 @@ export async function createRun(analysisId: number, referencia: string): Promise
   return row.id;
 }
 
+/** Rule versions by id (a run's own versions, never "the version in force today"). */
+export async function ruleVersionsByIds(ids: number[]): Promise<Map<number, RuleVersion>> {
+  const rows = ids.length ? await (await getDb()).select().from(schema.ruleVersion).where(inArray(schema.ruleVersion.id, ids)) : [];
+  return new Map(rows.map((r) => [r.id, toRuleVersion(r)]));
+}
+
 export async function getRun(runId: number) {
   const [run] = await (await getDb()).select().from(schema.calculationRun).where(eq(schema.calculationRun.id, runId));
   return run;
@@ -63,6 +70,14 @@ export async function listRuns(analysisId: number) {
     .orderBy(desc(r.id));
 }
 
+/** A run with its analysis and its own rule versions, checked to belong together. */
+export async function loadRunView(analysisId: number, runId: number) {
+  const run = Number.isSafeInteger(runId) ? await getRun(runId) : undefined;
+  if (!run || run.analysisId !== analysisId) return undefined;
+  const [analysis, versions] = await Promise.all([getAnalysis(analysisId), ruleVersionsByIds(run.ruleVersions.map((v) => v.id))]);
+  return analysis ? { run, analysis, versions } : undefined;
+}
+
 /**
  * Re-executes a stored run from its own inputs and rule versions (by stored id, never "the version in force today")
  * and compares with what was stored. A parameter/hash mismatch is an error, never a silent recompute.
@@ -70,9 +85,7 @@ export async function listRuns(analysisId: number) {
 export async function rerun(runId: number) {
   const run = await getRun(runId);
   if (!run) throw new ScenarioError("Cálculo não encontrado.");
-  const ids = run.ruleVersions.map((v) => v.id);
-  const rows = await (await getDb()).select().from(schema.ruleVersion).where(inArray(schema.ruleVersion.id, ids));
-  const byId = new Map(rows.map((r) => [r.id, toRuleVersion(r)]));
+  const byId = await ruleVersionsByIds(run.ruleVersions.map((v) => v.id));
   const versions = run.ruleVersions.map((stored) => {
     const v = byId.get(stored.id);
     if (!v) throw new ScenarioError(`rule_version ${stored.id} não existe mais.`);

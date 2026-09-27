@@ -16,8 +16,11 @@ export type RuleContext = {
 };
 
 export type Unidade = "dias" | "meses" | "idadeMeses" | "pontos";
-/** Numbers only: formatting is the UI's job, so stored results compare exactly on re-run. */
-export type Requisito = { id: string; label: string; unidade: Unidade; exigido: number; atual: number; atendido: boolean; param: string };
+/**
+ * Numbers only: formatting is the UI's job, so stored results compare exactly on re-run.
+ * `comparacao: "maximo"` means `atual` must stay below `exigido` (default: reach at least `exigido`).
+ */
+export type Requisito = { id: string; label: string; unidade: Unidade; exigido: number; atual: number; atendido: boolean; param: string; comparacao?: "maximo" };
 export type RuleOutcome = { aplicavel: boolean; motivo?: string; elegivel: boolean; requisitos: Requisito[] };
 export type RuleFn = (ctx: RuleContext, params: never, data: string) => RuleOutcome;
 
@@ -58,7 +61,10 @@ export const year = (data: string) => Number(data.slice(0, 4));
 /** Two decimals, floored: a requirement is met only when actually reached. */
 export const floor2 = (n: number) => Math.floor(n * 100) / 100;
 
-export const requisito = (r: Omit<Requisito, "atendido">, atendido = r.atual >= r.exigido): Requisito => ({ ...r, atendido });
+export const requisito = (r: Omit<Requisito, "atendido">, atendido = r.comparacao === "maximo" ? r.atual < r.exigido : r.atual >= r.exigido): Requisito => ({
+  ...r,
+  atendido,
+});
 
 // ---------- content hash (H2: a rule version is identified by what it says, not by its row) ----------
 

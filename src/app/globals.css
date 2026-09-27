@@ -238,5 +238,17 @@ td.wrap { white-space: normal; min-width: 12ch; }
 .scenario.is-later .scenario-verdict { color: var(--red); }
 .scenario.is-na { opacity: 0.75; }
 .requisitos { list-style: none; margin: 0.25rem 0 0; padding: 0; display: grid; gap: 0.6rem; }
-.requisitos li { display: grid; grid-template-columns: 1.2rem 1fr; gap: 0.4rem; font-size: 0.9rem; }
-.requisitos .falta > span { color: var(--red); }
+.requisitos > li { display: grid; grid-template-columns: 1.2rem 1fr; gap: 0.4rem; font-size: 0.9rem; }
+.requisitos > .falta > span { color: var(--red); }
+.highlight { margin: 0; padding: 0.9rem 1.1rem; border-left: 3px solid var(--red); background: color-mix(in srgb, var(--red) 6%, var(--surface)); }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.toolbar .inline-form { flex: 0 1 auto; }
+a.button { text-decoration: none; display: inline-block; }
+/* One column per rule, side by side; scrolls sideways rather than squeezing an opened trail. */
+.scenarios { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(260px, 1fr); overflow-x: auto; padding-bottom: 0.5rem; }
+.trail-list code { overflow-wrap: anywhere; }
+.trail summary { color: var(--ink); font-weight: 400; font-size: 0.85rem; text-decoration: underline dotted var(--red); text-underline-offset: 3px; }
+.trail[open] summary { margin-bottom: 0.4rem; }
+.trail-list { list-style: none; margin: 0.25rem 0 0; padding: 0 0 0 0.75rem; border-left: 2px solid var(--line); display: grid; gap: 0.45rem; font-size: 0.8rem; }
+.trail-list code { font-size: 0.72rem; }
+tr:target { background: color-mix(in srgb, var(--status-warning) 20%, transparent); }
