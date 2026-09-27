@@ -51,6 +51,7 @@ main.container { flex: 1; padding-block: 2rem 3rem; }
 }
 .lede { max-width: 52ch; color: var(--muted); font-size: 1.05rem; margin: 1rem 0 0; }
 .muted { color: var(--muted); }
+a { color: var(--red); text-underline-offset: 3px; }
 .mark { font: 700 0.75rem/1 var(--font-sans), sans-serif; letter-spacing: 0.06em; color: var(--red); }
 code { font: 0.85rem ui-monospace, SFMono-Regular, Menlo, monospace; }
 
@@ -165,3 +166,11 @@ td:first-child { white-space: normal; font-weight: 600; }
 .login-panel { display: grid; place-content: center; gap: 2rem; padding: 2rem 16px; justify-items: center; }
 .login-panel form { width: min(320px, 100%); }
 @media (max-width: 800px) { .login { grid-template-columns: 1fr; } .login-brand { gap: 1.5rem; } }
+
+/* Analysis page */
+.stack-lg { display: grid; gap: 1.5rem; }
+.small { font-size: 0.8rem; }
+.fragments { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.fragments li { padding: 0.5rem 0; border-bottom: 1px solid var(--line); }
+.problem-row td { border-bottom: 1px solid var(--line); padding-top: 0; white-space: normal; }
+td a { color: inherit; text-decoration-color: var(--red); text-underline-offset: 3px; }

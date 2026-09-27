@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { connection } from "next/server";
 import { listAnalyses } from "@/ingestion/ingest";
 import { UploadForm } from "./upload-form";
@@ -26,14 +27,15 @@ export default async function Home() {
           ) : (
             <table>
               <thead>
-                <tr><th>Cliente</th><th>Criada em</th><th>Status</th><th>PDF (SHA-256)</th></tr>
+                <tr><th>Cliente</th><th>Criada em</th><th>Vínculos</th><th>Não lidos</th><th>PDF (SHA-256)</th></tr>
               </thead>
               <tbody>
                 {analyses.map((a) => (
                   <tr key={a.id}>
-                    <td>{a.clientLabel}</td>
+                    <td><Link href={`/analises/${a.id}`}>{a.clientLabel}</Link></td>
                     <td>{dateTime.format(a.createdAt)}</td>
-                    <td><span className="badge">{a.status === "UPLOADED" ? "Enviado" : a.status}</span></td>
+                    <td>{a.vinculos ?? "—"}</td>
+                    <td>{a.unparsed ? <span className="badge">{a.unparsed}</span> : a.unparsed === 0 ? "0" : "—"}</td>
                     <td><code title={a.pdfSha256}>{a.pdfSha256.slice(0, 8)}…{a.pdfSha256.slice(-4)}</code></td>
                   </tr>
                 ))}

@@ -13,12 +13,13 @@ Observed in public model extracts: UNILAB 2019 (the real text layout with person
 - `Identificação do Filiado` is **repeated on every page**: `NIT:`, `CPF:`, `Nome:`, `Data de nascimento:`, `Nome da mãe:`, as label:value pairs, two or three per line.
 - Footer: `O INSS poderá rever a qualquer tempo as informações constantes deste extrato, conforme art. 19, § 3° do Decreto 3.048/99.`
 
-Page chrome is *recognised* text (it produces a `recognised: header` record), not an `UnparsedFragment`, and it's never silently skipped either.
+Page chrome (header, standalone issue timestamp, footer, authenticity note) and section titles are *recognised* by explicit patterns in `PAGE_CHROME` / `SECTION_TITLES` (`src/cnis/parse.ts`). Only text matching them is skipped. Everything else is consumed into a field or becomes an `UnparsedFragment`.
 
 **`Relações Previdenciárias`:** each vínculo is a block that **repeats its own column-header row**. There are two variants:
 - Employment or contribution: `Seq. | NIT | Código Emp.* | Origem do Vínculo | Data Início | Data Fim | Tipo Filiado no Vínculo | Últ. Remun. | Indicadores`. \*The 2017 issue calls it `CNPJ/CEI/CPF`. Origem holds the employer name, `Tipo Filiado` holds e.g. `Empregado`, `Últ. Remun.` is `MM/yyyy`, and Indicadores is e.g. `PEXT`.
 - Benefit: `Seq. | NIT | NB | Origem do Vínculo | Espécie | Data Início | Data Fim | Situação`, e.g. `Benefício`, `80 - AUXILIO SALARIO MATERNIDADE`, `CESSADO`. Whether and how benefit periods count toward contribution time is a **domain question**: mark them `REVISAR` and ask. Don't invent a rule.
 - `Data Fim` can be empty (a vínculo with no end date, see §4).
+- `[VALIDAR]` In the blanked UNILAB model, the `Remunerações` subtitle sits on the **same line** as the vínculo row, so it lands in `Origem do Vínculo`. If real extracts do the same, the parser must split it off. Check this against the first real extract.
 
 **`Remunerações`** sits under an employment block. It's a grid of **repeated triplets** `Competência | Remuneração | Indicadores`, three per text line. The 2014 issue adds `Agentes Nocivos` to each triplet. The reading order across the grid differs between issues, so **don't depend on order**: every competência identifies itself (`MM/yyyy`). Parse every triplet on a line and sort afterwards.
 
@@ -77,5 +78,11 @@ Given a PDF and a hand-annotated JSON answer key (the correct vínculos and comp
 - precision and recall per vínculo and per competência;
 - **the fraction of errors that were flagged** (`REVISAR` / `UnparsedFragment`) versus silent errors. This is the headline number.
 
-## Planned tables
-`filiado(analysis_id, nit, cpf, nome, data_nascimento, sexo)` · `vinculo(analysis_id, seq, empregador, origem, tipo_filiado, data_inicio, data_fim, status, status_motivo, source_ref jsonb)` · `remuneracao(vinculo_id, competencia, valor_centavos, indicadores text[], source_ref jsonb)` · `unparsed_fragment(analysis_id, page, line, raw_text)` · `indicator_catalog(code, descricao, efeito)` · `manual_edit(analysis_id, entity, entity_id, field, old_value, new_value, justificativa, edited_at)`. Sex isn't reliably in the CNIS, so ask for it on the review screen.
+## Code map and storage
+- `src/cnis/lines.ts`: `extractLines` (pdfjs → lines with page and line numbers).
+- `src/cnis/parse.ts`: `parseLines` / `parseCnis`, the types and `PARSER_VERSION`.
+- `src/cnis/synthetic.ts`: `renderCnis`, the generator.
+- `public/cnis-exemplo-sintetico.pdf`: the downloadable demo, kept parseable by a test.
+- The whole `CnisExtraction` is stored **immutable** in `analysis.extraction` (jsonb), with `analysis.parser_version`. There are no per-row tables for raw data.
+- Stage 3 adds `manual_edit(analysis_id, target, field, old_value, new_value, justificativa, edited_at)`, which is append-only and replayed by `buildTimeline`, plus `indicator_catalog(code, descricao, efeito)`.
+- Sex isn't reliably in the CNIS, so ask for it on the review screen.

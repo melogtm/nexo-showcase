@@ -48,6 +48,9 @@ export function UploadForm() {
           </span>
         )}
       </label>
+      <p className="muted small">
+        Sem um CNIS à mão? <a href="/cnis-exemplo-sintetico.pdf" download>Baixe um exemplo sintético</a>. Nesta instância pública, use apenas dados fictícios.
+      </p>
       <button type="submit" className="button" disabled={pending}>{pending ? "Enviando…" : "Enviar CNIS"}</button>
     </form>
   );

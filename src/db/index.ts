@@ -18,5 +18,7 @@ async function connect(): Promise<Db> {
   return db as unknown as Db;
 }
 
-export const db = await connect();
+// Lazy: connecting at import time made every `next build` worker open (and race on) the local PGlite dir.
+let connection: Promise<Db> | undefined;
+export const getDb = () => (connection ??= connect());
 export { schema };
