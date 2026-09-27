@@ -1,4 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 // Single-user login (the public deploy stores CNIS PDFs, which carry personal data).
 // Session cookie = "<expiresAtMs>.<hmac>", keyed by the password: changing NEXO_PASSWORD logs everyone out.
@@ -34,4 +36,10 @@ export function isValidSession(creds: Credentials, cookie: string | undefined, n
   const [expires, mac] = cookie?.split(".") ?? [];
   if (!expires || !mac || !(Number(expires) > now)) return false;
   return safeEqual(mac, hmac(creds.password, `${creds.user}:${expires}`).toString("base64url"));
+}
+
+/** Defence in depth behind src/proxy.ts: Server Actions and Route Handlers are reachable by direct request, so each re-checks. */
+export async function requireSession() {
+  const creds = credentials();
+  if (!creds || !isValidSession(creds, (await cookies()).get(SESSION_COOKIE)?.value)) redirect("/login");
 }

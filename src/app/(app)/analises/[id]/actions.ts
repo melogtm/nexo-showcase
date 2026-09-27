@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { credentials } from "@/auth";
+import { credentials, requireSession } from "@/auth";
 import { type NewEdit, loadReview, recordEdits } from "@/timeline/review";
 import { isIsoDate } from "@/timeline/timeline";
 
@@ -10,6 +10,7 @@ export type EditState = { error?: string; saved?: boolean };
 const INTENTS = ["salvar", "confirmar", "excluir", "reabrir"] as const;
 
 export async function saveVinculo(analysisId: number, key: string, _prev: EditState, form: FormData): Promise<EditState> {
+  await requireSession();
   const review = await loadReview(analysisId);
   const periodo = review?.timeline?.periodos.find((p) => p.key === key);
   if (!review?.timeline || !periodo) return { error: "Vínculo não encontrado." };
@@ -48,6 +49,7 @@ export async function saveVinculo(analysisId: number, key: string, _prev: EditSt
 }
 
 export async function saveSexo(analysisId: number, form: FormData) {
+  await requireSession();
   const sexo = String(form.get("sexo"));
   const review = await loadReview(analysisId);
   if (!review?.timeline || (sexo !== "F" && sexo !== "M") || sexo === review.timeline.sexo) return;

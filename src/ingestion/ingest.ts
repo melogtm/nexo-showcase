@@ -11,6 +11,7 @@ export class IngestionError extends Error {}
 export async function ingest(clientLabel: string, pdf: Uint8Array) {
   const label = clientLabel.trim();
   if (!label) throw new IngestionError("Informe a identificação do cliente.");
+  if (label.length > 200) throw new IngestionError("Identificação do cliente com mais de 200 caracteres.");
   if (pdf.length > MAX_PDF_BYTES) throw new IngestionError("PDF maior que 4 MB.");
   if (!PDF_MAGIC.equals(pdf.subarray(0, PDF_MAGIC.length))) throw new IngestionError("O arquivo enviado não é um PDF.");
 

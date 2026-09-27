@@ -1,8 +1,10 @@
+import { requireSession } from "@/auth";
 import { renderReport, reportData } from "@/scenarios/report";
 import { loadRunView } from "@/scenarios/store";
 
-/** Printable HTML report of one run. `?download` serves it as a file to keep. Auth is enforced by src/proxy.ts. */
+/** Printable HTML report of one run. `?download` serves it as a file to keep. Auth: src/proxy.ts, re-checked here. */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string; runId: string }> }) {
+  await requireSession();
   const { id, runId } = await params;
   const view = await loadRunView(Number(id), Number(runId));
   if (!view) return new Response("Cálculo não encontrado.", { status: 404 });

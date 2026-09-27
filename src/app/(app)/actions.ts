@@ -1,5 +1,6 @@
 "use server";
 
+import { requireSession } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { IngestionError, ingest } from "@/ingestion/ingest";
@@ -8,6 +9,7 @@ import { IngestionError, ingest } from "@/ingestion/ingest";
 export type UploadState = { error?: string; clientLabel?: string };
 
 export async function uploadAnalysis(_prev: UploadState, form: FormData): Promise<UploadState> {
+  await requireSession();
   const clientLabel = String(form.get("clientLabel") ?? "");
   const pdf = form.get("pdf");
   if (!(pdf instanceof File)) return { error: "Selecione o PDF do CNIS.", clientLabel };

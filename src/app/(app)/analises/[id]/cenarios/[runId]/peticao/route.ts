@@ -1,9 +1,11 @@
+import { requireSession } from "@/auth";
 import { renderPetition } from "@/scenarios/petition";
 import { reportData } from "@/scenarios/report";
 import { loadRunView } from "@/scenarios/store";
 
-/** Petition draft for one rule of a run: `?regra=<rule_code>`, `&download` to keep it. Auth is enforced by src/proxy.ts. */
+/** Petition draft for one rule of a run: `?regra=<rule_code>`, `&download` to keep it. Auth: src/proxy.ts, re-checked here. */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string; runId: string }> }) {
+  await requireSession();
   const { id, runId } = await params;
   const view = await loadRunView(Number(id), Number(runId));
   const url = new URL(request.url);
