@@ -10,7 +10,8 @@
     "test": "vitest run",
     "doctor": "react-doctor --no-telemetry -y",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "eval:h1": "NODE_ENV=test tsx scripts/eval-h1.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
@@ -31,6 +32,7 @@
     "eslint-config-next": "16.3.6",
     "pdf-lib": "^1.17.1",
     "react-doctor": "^0.9.14",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.2"
   },

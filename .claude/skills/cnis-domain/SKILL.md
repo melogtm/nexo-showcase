@@ -82,6 +82,20 @@ Given a PDF and a hand-annotated JSON answer key (the correct vínculos and comp
 - precision and recall per vínculo and per competência;
 - **the fraction of errors that were flagged** (`REVISAR` / `UnparsedFragment`) versus silent errors. This is the headline number.
 
+As built (stage 6): `src/eval/h1.ts` is pure, and `scripts/eval-h1.ts` is the CLI (`npm run eval:h1 -- <pdf> <key.json> ...`; with no arguments it scores the public sample). It exits 1 on any silent error.
+- **Input:** the untouched parser output, via `buildTimeline(extraction, [], catalog)`. Edits are never applied: they are the lawyer's work, not the parser's.
+- **Answer key** (`AnswerKey`): per vínculo, `seq`, `tipo` (`EMPREGO`/`BENEFICIO`/`CONTRIBUINTE`), `dataInicio`, `dataFim` (`null` when the CNIS prints none; an inferred end is not extraction), and `competencias[]` with `valorCentavos` (the remuneração, or the salário de contribuição). Items match by `seq`, then by competência. An unreadable seq pairs with the next unmatched key item and counts as a seq divergence.
+- **Correct** means every compared field is equal. An item that is wrong counts as one error, not as both a false positive and a false negative.
+- **Flagged**, per error kind:
+  - wrong or spurious vínculo: its row is not `OK`;
+  - wrong or spurious competência: its own status is not `OK`;
+  - missing competência: an unparsed excerpt contains its `MM/yyyy`. A generic problem on the row doesn't count, because the review screen doesn't point at the missing month;
+  - missing vínculo: an unparsed excerpt contains its start date.
+
+  The substring match is a heuristic, and the whole definition is a `[VALIDAR]` choice.
+- **Keys must not come from the parser.** The public sample's key (`fixtures/h1/cnis-exemplo-sintetico.json`) was annotated from `pdftotext -layout`, an independent extractor. Keys for real extracts stay beside the PDF in `fixtures/real/` (gitignored).
+- **Results:** the public sample scores 100/100 with no errors, and so does the UNILAB model (3 vínculos, blanked data). `src/eval/h1.test.ts` sabotages the extraction to prove both a silent and a flagged outcome.
+
 ## Code map and storage
 - `src/cnis/lines.ts`: `extractLines` (pdfjs → lines with page and line numbers).
 - `src/cnis/parse.ts`: `parseLines` / `parseCnis`, the types and `PARSER_VERSION`.
