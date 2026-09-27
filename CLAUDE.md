@@ -76,7 +76,7 @@ Code and identifiers are in English. Domain terms stay in Portuguese when there'
 4. ✅ Versioned rule engine, the five rules, and a reproducible `calculation_run` with a reproducibility test.
 5. ✅ Scenarios screen with a clickable trail, plus HTML export.
 6. ✅ H1 evaluation script (`npm run eval:h1`).
-7. Stretch: ✅ RMI estimate (INPC-corrected average, per-rule coefficient; `rule-engine` §9), then a petition draft.
+7. ✅ Stretch: RMI estimate (INPC-corrected average, per-rule coefficient; `rule-engine` §9), then a petition draft from a fixed template (no LLM; `rule-engine` §10).
 
 Each stage ends with `/stage-gate`: tests green, then the `spec-guardian` review, then react-doctor and a ponytail review, then one commit. Don't start a stage while the previous one is broken. Ponytail is on: take the smallest thing that works, and don't scaffold ahead of the current stage.
 

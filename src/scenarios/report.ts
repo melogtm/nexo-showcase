@@ -1,6 +1,7 @@
 import { brDate } from "@/format";
 import { union } from "@/timeline/timeline";
 import type { Resultado, RuleVersion, ScenarioInput, TrailNode } from "./evaluate";
+import type { loadRunView } from "./store";
 import { earliest, humanize, inDisplayOrder, paramValue, requirementText, RMI_RESSALVA, rmiBasis, rmiValue, verdict } from "./present";
 
 // Self-contained printable HTML report of one calculation_run (no external assets; opens offline, prints cleanly).
@@ -8,7 +9,7 @@ import { earliest, humanize, inDisplayOrder, paramValue, requirementText, RMI_RE
 export type ReportData = {
   runId: number;
   clientLabel: string;
-  filiado: { nome: string | null; nit: string | null };
+  filiado: { nome: string | null; nit: string | null; cpf?: string | null };
   referenceDate: string;
   createdAt: Date;
   pdfSha256: string;
@@ -19,7 +20,24 @@ export type ReportData = {
   versions: Map<number, RuleVersion>;
 };
 
-const esc = (s: unknown) =>
+/** The report's data from a loaded run (shared by the report and the petition draft). */
+export function reportData({ run, analysis, versions }: NonNullable<Awaited<ReturnType<typeof loadRunView>>>): ReportData {
+  const f = analysis.extraction?.filiado;
+  return {
+    runId: run.id,
+    clientLabel: analysis.clientLabel,
+    filiado: { nome: f?.nome?.value ?? null, nit: f?.nit?.value ?? null, cpf: f?.cpf?.value ?? null },
+    referenceDate: run.referenceDate,
+    createdAt: run.createdAt,
+    pdfSha256: run.pdfSha256,
+    input: run.timelineSnapshot,
+    resultados: run.result,
+    rmiTrail: run.trail.EC103_ART26_RMI,
+    versions,
+  };
+}
+
+export const esc = (s: unknown) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
 

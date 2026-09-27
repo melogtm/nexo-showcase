@@ -51,3 +51,28 @@ test("humanize merges consecutive ranges and formats dates", async () => {
   expect(humanize("2019-01")).toBe("01/2019");
   expect(humanize("123456 centavos × 1.333333 = 164608 centavos")).toBe("R$ 1.234,56 × 1.333333 = R$ 1.646,08");
 });
+
+test("the petition draft fills only what the run knows, escapes it, and warns when the rule is not met yet", async () => {
+  const { renderPetition } = await import("./petition");
+  const data = {
+    runId: 5, clientLabel: "C", filiado: { nome: "FULANA <i>", nit: "123.45678.90-1", cpf: null }, referenceDate: "2026-09-27",
+    createdAt: new Date("2026-09-27T12:00:00Z"), pdfSha256: "ab".repeat(32), input, versions: new Map(),
+    resultados: [
+      resultado("EC103_ART19_PERMANENTE", "Regra permanente", "2039-04-01"),
+      { ...resultado("EC103_ART20_PEDAGIO_100", "Pedágio de 100%", "2026-09-27"), elegivelHoje: true },
+      { ...resultado("EC103_ART17_PEDAGIO_50", "Pedágio de 50%", null), aplicavel: false },
+    ],
+  };
+  expect(renderPetition(data, "EC103_ART17_PEDAGIO_50")).toBeUndefined(); // not applicable
+  expect(renderPetition(data, "NOPE")).toBeUndefined();
+
+  const later = renderPetition(data, "EC103_ART19_PERMANENTE")!;
+  expect(later).toContain("não protocolar");
+  expect(later).toContain("data projetada: 01/04/2039");
+  expect(later).toContain("FULANA &lt;i&gt;");
+  expect(later).toContain("CPF sob o nº <mark>[●]</mark>"); // not in the CNIS: a visible blank, never invented
+  expect(later).toContain("EMPRESA &lt;b&gt;X&lt;/b&gt; (seq. 1): 01/01/2010 a 31/12/2010, conforme CNIS, p. 1, l. 9.");
+  expect(later).toContain("<strong>(não preenchido)</strong>");
+
+  expect(renderPetition(data, "EC103_ART20_PEDAGIO_100")).not.toContain("não protocolar");
+});

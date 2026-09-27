@@ -113,4 +113,8 @@ New runs now pick v2; old runs still re-execute with v1. Follow the same procedu
 
 ## 10. Stretch (only after stages 2–5 are green)
 1. RMI: the average of 100% of salaries since 07/1994, corrected by INPC (index table loaded from CSV), with a coefficient of 60% + 2% per year above the threshold `[VALIDAR]`. This is where a decimal library earns its place (index factors). Until then, integer centavos are enough.
-2. A petition draft from a template, filled with the chosen scenario's values and citing the trail. An LLM is allowed here, and only here.
+2. ✅ **Petition draft (stage 7b).** The team chose a **fixed template, no LLM**: it's free and deterministic, and every sentence traces back to the run.
+   - `src/scenarios/petition.ts`, `renderPetition(reportData, ruleCode)`, served at `.../cenarios/[runId]/peticao?regra=<code>` (`&download` for a file) with `no-store`.
+   - The draft fills the filiado's details, the counted períodos with their CNIS page and line, the rule's requirements, and the estimated RMI. Everything the CNIS can't give (DER, NB, address, OAB, valor da causa…) is a visible `[●]`, never invented.
+   - It's offered only for applicable rules. When the rule isn't met on the reference date, a warning ("não protocolar") appears on screen and is hidden in print.
+   - It shares `reportData()` and `esc()` with the report.

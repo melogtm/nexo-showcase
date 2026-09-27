@@ -19,6 +19,8 @@ async function connect(): Promise<Db> {
 }
 
 // Lazy: connecting at import time made every `next build` worker open (and race on) the local PGlite dir.
-let connection: Promise<Db> | undefined;
-export const getDb = () => (connection ??= connect());
+// On globalThis: `next dev` bundles pages and route handlers separately, and two PGlite instances on one dir
+// don't see each other's writes (a report route kept serving the database as of its first request).
+const g = globalThis as { nexoDb?: Promise<Db> };
+export const getDb = () => (g.nexoDb ??= connect());
 export { schema };

@@ -45,7 +45,7 @@ export default async function ScenariosPage({ params }: { params: Promise<{ id: 
         </div>
         <div className="scenarios">
           {inDisplayOrder(run.result).map((r) => (
-            <Scenario key={r.ruleCode} r={r} trail={run.trail[r.ruleCode]} rmiTrail={run.trail.EC103_ART26_RMI} version={versions.get(r.ruleVersionId)} analysisId={analysis.id} />
+            <Scenario key={r.ruleCode} r={r} trail={run.trail[r.ruleCode]} rmiTrail={run.trail.EC103_ART26_RMI} version={versions.get(r.ruleVersionId)} analysisId={analysis.id} petitionUrl={`/analises/${analysis.id}/cenarios/${run.id}/peticao?regra=${r.ruleCode}`} />
           ))}
         </div>
         <p className="muted small">
@@ -57,7 +57,7 @@ export default async function ScenariosPage({ params }: { params: Promise<{ id: 
   );
 }
 
-function Scenario({ r, trail, rmiTrail, version, analysisId }: { r: Resultado; trail?: TrailNode; rmiTrail?: TrailNode; version?: RuleVersion; analysisId: number }) {
+function Scenario({ r, trail, rmiTrail, version, analysisId, petitionUrl }: { r: Resultado; trail?: TrailNode; rmiTrail?: TrailNode; version?: RuleVersion; analysisId: number; petitionUrl: string }) {
   const v = verdict(r);
   return (
     <section className={`card scenario is-${v.kind}`}>
@@ -96,6 +96,12 @@ function Scenario({ r, trail, rmiTrail, version, analysisId }: { r: Resultado; t
             {r.rmi.valorCentavos !== null && rmiTrail && <RmiTrail node={rmiTrail} analysisId={analysisId} />}
           </details>
         </div>
+      )}
+      {r.aplicavel && (
+        <p className="small">
+          <a href={petitionUrl} target="_blank" rel="noopener">Minuta de petição</a>
+          {!r.elegivelHoje && <span className="muted"> · só para planejamento</span>}
+        </p>
       )}
     </section>
   );
