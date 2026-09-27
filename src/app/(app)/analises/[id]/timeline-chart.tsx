@@ -1,15 +1,19 @@
 import { Temporal } from "temporal-polyfill";
 import { brDate } from "@/format";
+import { epochDay } from "@/rules/core";
 import { type Intervalo, type Status, type Timeline, union } from "@/timeline/timeline";
 
-const STATUS_LABEL: Record<Status, string> = { OK: "OK", PENDENTE: "Pendente", REVISAR: "Revisar", EXCLUIDO: "Excluído" };
+export const STATUS: Record<Status, { label: string; icon: string }> = {
+  OK: { label: "OK", icon: "✓" },
+  PENDENTE: { label: "Pendente", icon: "⏸" },
+  REVISAR: { label: "Revisar", icon: "⚠" },
+  EXCLUIDO: { label: "Excluído", icon: "✕" },
+};
 const W = 1000;
 const LABEL_W = 210;
 const ROW = 26;
 const AXIS = 22;
 const BAR = 14;
-
-const epochDay = (iso: string) => Temporal.PlainDate.from("1970-01-01").until(Temporal.PlainDate.from(iso)).days;
 
 /** Horizontal timeline: one row per período, gap bands behind, the counted union as the last row. */
 export function TimelineChart({ timeline }: { timeline: Timeline }) {
@@ -49,7 +53,7 @@ export function TimelineChart({ timeline }: { timeline: Timeline }) {
             <text className="chart-label" x={0} y={rowY(i) + BAR - 3}>{`${p.seq ?? "?"} · ${truncate(p.origem ?? "—", 26)}`}</text>
             {union(p.intervalos).map((iv) => ( // consecutive paid months read as one bar
               <rect key={iv.inicio} className={`chart-bar is-${p.status.toLowerCase()}`} x={x(iv.inicio)} width={Math.max(3, xEnd(iv.fim) - x(iv.inicio) - 1)} y={rowY(i)} height={BAR} rx={3}>
-                <title>{`${p.origem ?? "—"}\n${range(iv)}${p.fimInferido ? " (fim inferido)" : ""}\n${STATUS_LABEL[p.status]}${p.confirmado ? " · confirmado" : ""}${p.motivos.length ? `\n${p.motivos.join("\n")}` : ""}`}</title>
+                <title>{`${p.origem ?? "—"}\n${range(iv)}${p.fimInferido ? " (fim inferido)" : ""}\n${STATUS[p.status].label}${p.confirmado ? " · confirmado" : ""}${p.motivos.length ? `\n${p.motivos.join("\n")}` : ""}`}</title>
               </rect>
             ))}
           </g>

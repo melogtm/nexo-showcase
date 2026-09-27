@@ -1,5 +1,4 @@
 import { brDate } from "@/format";
-import { union } from "@/timeline/timeline";
 import { humanize, requirementText, rmiBasis, rmiValue, RMI_RESSALVA } from "./present";
 import { esc, type ReportData } from "./report";
 
@@ -15,7 +14,7 @@ export function renderPetition(d: ReportData, ruleCode: string): string | undefi
   if (!r) return undefined;
   const version = d.versions.get(r.ruleVersionId);
   const periodos = d.input.periodos
-    .map((p) => `<li>${esc(p.origem ?? "vínculo")} (seq. ${esc(p.seq ?? "?")}): ${esc(union(p.intervalos).map((i) => humanize(`${i.inicio}..${i.fim}`)).join(", "))}, conforme CNIS, p. ${p.source.page}, l. ${p.source.line}.</li>`)
+    .map((p) => `<li>${esc(p.origem ?? "vínculo")} (seq. ${esc(p.seq ?? "?")}): ${esc(humanize(p.intervalos.map((i) => `${i.inicio}..${i.fim}`).join(", ")))}, conforme CNIS, p. ${p.source.page}, l. ${p.source.line}.</li>`)
     .join("");
   const requisitos = r.requisitos.map((q) => `<li>${esc(q.label)}: ${esc(requirementText(q))} ${q.atendido ? "(preenchido)" : "<strong>(não preenchido)</strong>"}.</li>`).join("");
   const aviso = r.elegivelHoje

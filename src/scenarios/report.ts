@@ -1,5 +1,4 @@
 import { brDate } from "@/format";
-import { union } from "@/timeline/timeline";
 import type { Resultado, RuleVersion, ScenarioInput, TrailNode } from "./evaluate";
 import type { loadRunView } from "./store";
 import { earliest, humanize, inDisplayOrder, paramValue, requirementText, RMI_RESSALVA, rmiBasis, rmiValue, verdict } from "./present";
@@ -61,7 +60,7 @@ export function renderReport(d: ReportData): string {
     })
     .join("\n");
   const periodos = d.input.periodos
-    .map((p) => `<tr><td>${esc(p.seq ?? "?")}</td><td>${esc(p.origem ?? "—")}</td><td>${esc(union(p.intervalos).map((i) => humanize(`${i.inicio}..${i.fim}`)).join(", "))}</td><td>p. ${p.source.page}, l. ${p.source.line}</td><td>${p.editIds.length ? `edições nº ${p.editIds.join(", ")}` : "—"}</td></tr>`)
+    .map((p) => `<tr><td>${esc(p.seq ?? "?")}</td><td>${esc(p.origem ?? "—")}</td><td>${esc(humanize(p.intervalos.map((i) => `${i.inicio}..${i.fim}`).join(", ")))}</td><td>p. ${p.source.page}, l. ${p.source.line}</td><td>${p.editIds.length ? `edições nº ${p.editIds.join(", ")}` : "—"}</td></tr>`)
     .join("");
   const media = d.rmiTrail?.children?.[0];
   const salarios = (media?.children ?? []).map((n) => `<tr><td>${esc(humanize(n.label))}</td><td>${esc(humanize(n.value ?? ""))}</td></tr>`).join("");

@@ -5,20 +5,14 @@ import { listRuns } from "@/scenarios/store";
 import { loadReview } from "@/timeline/review";
 import type { UnparsedFragment } from "@/cnis/parse";
 import type { listEdits } from "@/timeline/review";
-import type { Periodo, Status, Timeline } from "@/timeline/timeline";
+import type { Periodo, Timeline } from "@/timeline/timeline";
 
 type Edit = Awaited<ReturnType<typeof listEdits>>[number];
 import { saveSexo } from "./actions";
 import { CalcularButton } from "./cenarios/buttons";
-import { ChartLegend, TimelineChart } from "./timeline-chart";
+import { ChartLegend, STATUS, TimelineChart } from "./timeline-chart";
 import { VinculoEditor } from "./vinculo-editor";
 
-const STATUS: Record<Status, { label: string; icon: string }> = {
-  OK: { label: "OK", icon: "✓" },
-  PENDENTE: { label: "Pendente", icon: "⏸" },
-  REVISAR: { label: "Revisar", icon: "⚠" },
-  EXCLUIDO: { label: "Excluído", icon: "✕" },
-};
 const FIELD_LABEL: Record<string, string> = { dataInicio: "Início", dataFim: "Fim", decisao: "Decisão", sexo: "Sexo" };
 const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
 const showValue = (field: string, v: string | null) =>

@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { Temporal } from "temporal-polyfill";
-import type { SourceRef } from "@/cnis/parse";
 import type { Intervalo, Sexo } from "@/timeline/timeline";
 
 // Shared by every rule implementation. Changing what these helpers return changes results of old runs:
@@ -80,5 +79,3 @@ export function canonicalJson(value: unknown): string {
 }
 
 export const contentHash = (parameters: unknown) => createHash("sha256").update(canonicalJson(parameters)).digest("hex");
-
-export type { SourceRef };
