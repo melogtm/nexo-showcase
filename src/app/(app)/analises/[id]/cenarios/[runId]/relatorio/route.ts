@@ -16,6 +16,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     pdfSha256: run.pdfSha256,
     input: run.timelineSnapshot,
     resultados: run.result,
+    rmiTrail: run.trail.EC103_ART26_RMI,
     versions,
   });
   const download = new URL(request.url).searchParams.has("download");

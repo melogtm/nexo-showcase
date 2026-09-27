@@ -5,7 +5,7 @@ import { renderCnis } from "@/cnis/synthetic";
 import { getDb, schema } from "@/db";
 import { ingest } from "@/ingestion/ingest";
 import { contentHash } from "@/rules/core";
-import { RULES, ruleKey } from "@/rules/registry";
+import { RMI_RULES, RULES, ruleKey } from "@/rules/registry";
 import { recordEdits } from "@/timeline/review";
 import { type RuleVersion, type ScenarioInput, evaluate } from "./evaluate";
 import { ScenarioError, activeRuleVersions, createRun, rerun } from "./store";
@@ -103,6 +103,35 @@ describe("rule logic (fixture parameters)", () => {
   });
 });
 
+describe("RMI (fixture parameters and fixture index)", () => {
+  const rmi = version(9, "EC103_ART26_RMI", {
+    inicioPeriodoBasico: "2000-01", coeficienteBasePct: 50, coeficienteIntegralPct: 90, acrescimoPorAnoPct: 3, anosSemAcrescimo: { F: 1, M: 2 }, diasPorAno: 360,
+    formulaPorRegra: { EC103_ART19_PERMANENTE: "COEFICIENTE", EC103_ART20_PEDAGIO_100: "INTEGRAL", EC103_ART17_PEDAGIO_50: "FATOR_PREVIDENCIARIO" },
+  });
+  const input: ScenarioInput = {
+    ...person("F", "2015-01-01", "2019-12-31"),
+    salarios: [{ competencia: "1999-12", valorCentavos: 999_999 }, { competencia: "2019-01", valorCentavos: 100_000 }, { competencia: "2019-02", valorCentavos: 200_000 }],
+    inpc: { "2019-01": "100.0", "2019-02": "150.00", "2019-03": "200" },
+    correcaoAte: "2019-03",
+  };
+
+  test("corrects each salário by the index ratio, averages them, and applies each rule's formula", () => {
+    const { resultados, trail } = evaluate(input, [FIXTURES.art19, FIXTURES.art20, FIXTURES.art17, rmi], "2020-06-30");
+    const by = Object.fromEntries(resultados.map((r) => [r.ruleCode, r]));
+    // 100000 × 200/100 = 200000; 200000 × 200/150 = 266666.67 → 266667; average 233333.5 → 233334 (half-up). 1999-12 is before the period.
+    expect(trail.EC103_ART26_RMI.children![0]).toMatchObject({ value: "233334 centavos · 2 salários" });
+    expect(trail.EC103_ART26_RMI.children![0].children!.map((c) => c.value)).toEqual(["100000 centavos × 2.000000 = 200000 centavos", "200000 centavos × 1.333333 = 266667 centavos"]);
+    // Eligible today with 5 whole years (1826 days / 360): 50% + 3% × (5 − 1) = 62% → 144667.08 → 144667.
+    expect(by.EC103_ART19_PERMANENTE.rmi).toEqual({ formula: "COEFICIENTE", anosContribuicao: 5, coeficientePct: 62, valorCentavos: 144_667 });
+    expect(by.EC103_ART20_PEDAGIO_100.rmi).toMatchObject({ formula: "INTEGRAL", coeficientePct: 90, valorCentavos: 210_001 }); // 210000.6 → 210001
+    expect(by.EC103_ART17_PEDAGIO_50.rmi).toMatchObject({ formula: "FATOR_PREVIDENCIARIO", valorCentavos: null });
+  });
+
+  test("a missing index is a hard error, never a silent factor of 1", () => {
+    expect(() => evaluate({ ...input, inpc: { "2019-03": "200" } }, [FIXTURES.art19, rmi], "2020-06-30")).toThrow("INPC ausente para 2019-01");
+  });
+});
+
 describe("calculation_run (database)", async () => {
   const pdf = await renderCnis({
     emitidoEm: "27/09/2026 10:15:00",
@@ -117,7 +146,7 @@ describe("calculation_run (database)", async () => {
     expect(rows.length).toBeGreaterThanOrEqual(5);
     for (const r of rows) {
       expect(contentHash(r.parameters), r.ruleCode).toBe(r.contentHash);
-      expect(RULES[ruleKey(r.ruleCode, r.logicVersion)], r.ruleCode).toBeDefined();
+      expect(RULES[ruleKey(r.ruleCode, r.logicVersion)] ?? RMI_RULES[ruleKey(r.ruleCode, r.logicVersion)], r.ruleCode).toBeDefined();
     }
   });
 
@@ -128,12 +157,17 @@ describe("calculation_run (database)", async () => {
 
     const runId = await createRun(analysisId, "2026-09-27");
     expect((await rerun(runId)).identical).toBe(true);
+    const db = await getDb();
+    const [first] = await db.select().from(schema.calculationRun).where(sql`id = ${runId}`);
+    // The salários are corrected to the last index published before the reference month, frozen in the snapshot.
+    expect(first.timelineSnapshot.correcaoAte).toBe("2026-08");
+    expect(first.timelineSnapshot.inpc?.["2026-08"]).toBeDefined();
+    expect(first.result.find((r) => r.ruleCode === "EC103_ART19_PERMANENTE")?.rmi?.valorCentavos).toBeGreaterThan(0);
 
     // A new version of the points rule (stricter parameters) is inserted after the run.
     const [v1] = (await activeRuleVersions("2026-09-27")).filter((v) => v.ruleCode === "EC103_ART15_PONTOS");
     const p1 = v1.parameters as { pontosBase: { F: number; M: number } };
     const p2 = { ...p1, pontosBase: { F: p1.pontosBase.F + 5, M: p1.pontosBase.M + 5 } };
-    const db = await getDb();
     await db.insert(schema.ruleVersion).values({
       ruleCode: v1.ruleCode, version: v1.version + 1, nome: v1.nome, validFrom: "2026-01-01", legalBasis: v1.legalBasis,
       parameters: p2, logicVersion: 1, contentHash: contentHash(p2),

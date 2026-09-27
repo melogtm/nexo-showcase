@@ -27,10 +27,27 @@ test("the report escapes every user-supplied string, orders rules and names the 
   expect(html).toMatch(/Regra atingida mais cedo: <strong>Regra permanente<\/strong>/);
   expect(html).toContain("01/01/2010 a 31/12/2010");
   expect(html).toContain("edições nº 7");
+  expect(html).toContain("este cálculo não estimou o valor do benefício"); // a run made before the RMI existed
+});
+
+test("the report shows each rule's estimated RMI and the corrected salários", () => {
+  const withRmi = { ...resultado("EC103_ART19_PERMANENTE", "Regra permanente", "2039-04-01"), rmi: { formula: "COEFICIENTE" as const, anosContribuicao: 21, coeficientePct: 72, valorCentavos: 180_000 } };
+  const html = renderReport({
+    runId: 4, clientLabel: "C", filiado: { nome: null, nit: null }, referenceDate: "2026-09-27", createdAt: new Date("2026-09-27T12:00:00Z"), pdfSha256: "ab".repeat(32), input,
+    resultados: [withRmi],
+    rmiTrail: { label: "RMI", children: [{ label: "Salário de benefício", value: "250000 centavos · 1 salários", children: [{ label: "2019-01", value: "200000 centavos × 1.250000 = 250000 centavos" }] }, { label: "Correção", value: "INPC até 2026-08" }] },
+    versions: new Map(),
+  });
+  expect(html).toContain("Valor estimado (RMI): <strong>R$ 1.800,00</strong>");
+  expect(html).toContain("72% da média dos salários corrigidos, com 21 anos de contribuição");
+  expect(html).toContain("<td>01/2019</td><td>R$ 2.000,00 × 1.250000 = R$ 2.500,00</td>");
+  expect(html).toContain("INPC até 08/2026");
 });
 
 test("humanize merges consecutive ranges and formats dates", async () => {
   const { humanize } = await import("./present");
   expect(humanize("2022-01-01..2022-01-31, 2022-02-01..2022-02-28, 2022-04-01..2022-04-30")).toBe("01/01/2022 a 28/02/2022, 01/04/2022 a 30/04/2022");
   expect(humanize("2249 / 5475 (dias) em 2026-09-27")).toBe("2249 / 5475 (dias) em 27/09/2026");
+  expect(humanize("2019-01")).toBe("01/2019");
+  expect(humanize("123456 centavos × 1.333333 = 164608 centavos")).toBe("R$ 1.234,56 × 1.333333 = R$ 1.646,08");
 });

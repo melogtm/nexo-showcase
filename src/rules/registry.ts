@@ -5,6 +5,7 @@ import { art17v1 } from "./ec103-art17.v1";
 import { art17v2 } from "./ec103-art17.v2";
 import { art19v1 } from "./ec103-art19.v1";
 import { art20v1 } from "./ec103-art20.v1";
+import { art26v1, type RmiFn } from "./ec103-art26.v1";
 
 export const ruleKey = (ruleCode: string, logicVersion: number) => `${ruleCode}@${logicVersion}`;
 
@@ -16,4 +17,9 @@ export const RULES: Record<string, RuleFn> = {
   "EC103_ART17_PEDAGIO_50@2": art17v2 as RuleFn,
   "EC103_ART19_PERMANENTE@1": art19v1 as RuleFn,
   "EC103_ART20_PEDAGIO_100@1": art20v1 as RuleFn,
+};
+
+/** Benefit-amount rules: they run after the eligibility rules, on the dates those produced. */
+export const RMI_RULES: Record<string, RmiFn> = {
+  "EC103_ART26_RMI@1": art26v1 as RmiFn,
 };

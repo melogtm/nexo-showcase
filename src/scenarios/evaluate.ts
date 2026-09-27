@@ -1,7 +1,8 @@
 import { Temporal } from "temporal-polyfill";
 import type { CnisExtraction, SourceRef } from "@/cnis/parse";
 import { type Requisito, type RuleContext, contentHash } from "@/rules/core";
-import { RULES, ruleKey } from "@/rules/registry";
+import type { Rmi, RmiInput } from "@/rules/ec103-art26.v1";
+import { RMI_RULES, RULES, ruleKey } from "@/rules/registry";
 import type { Intervalo, Sexo, Timeline } from "@/timeline/timeline";
 
 // evaluate(input, ruleVersions, referencia) → { resultados, trail }. Pure: the same arguments always give the same result,
@@ -26,7 +27,7 @@ export type ScenarioInput = {
   tempoIntervalos: Intervalo[];
   carencia: string[];
   periodos: { key: string; seq: number | null; origem: string | null; intervalos: Intervalo[]; source: SourceRef; editIds: number[] }[];
-};
+} & Partial<RmiInput>; // absent in runs made before the RMI existed
 
 export type Resultado = {
   ruleVersionId: number;
@@ -40,6 +41,8 @@ export type Resultado = {
   requisitos: Requisito[];
   /** Earliest date the rule is met assuming continuous contribution after the reference date; null if not within the horizon. */
   dataProjetada: string | null;
+  /** Estimated benefit amount, when the run used an RMI rule version. */
+  rmi?: Rmi;
 };
 
 export type TrailNode = {
@@ -64,7 +67,17 @@ export function scenarioInput(extraction: CnisExtraction, timeline: Timeline, se
     periodos: timeline.periodos
       .filter((p) => p.status === "OK")
       .map(({ key, seq, origem, intervalos, source, editIds }) => ({ key, seq, origem, intervalos, source, editIds })),
+    salarios: salarios(timeline),
   };
+}
+
+/** [VALIDAR] Salários of counted competências; concurrent salários in the same month are summed (no teto applied). */
+function salarios(timeline: Timeline): RmiInput["salarios"] {
+  const byMonth = new Map<string, number>();
+  for (const p of timeline.periodos.filter((x) => x.status === "OK")) {
+    for (const c of p.competencias) if (c.status === "OK" && c.valorCentavos !== null) byMonth.set(c.competencia, (byMonth.get(c.competencia) ?? 0) + c.valorCentavos);
+  }
+  return [...byMonth].sort(([a], [b]) => a.localeCompare(b)).map(([competencia, valorCentavos]) => ({ competencia, valorCentavos }));
 }
 
 export function missingInputs(input: ScenarioInput): string[] {
@@ -76,9 +89,14 @@ export function evaluate(input: ScenarioInput, versions: RuleVersion[], referenc
   const ctx: RuleContext = { nascimento: input.nascimento!.value, sexo: input.sexo!, referencia, tempoIntervalos: input.tempoIntervalos, carencia: input.carencia };
   const resultados: Resultado[] = [];
   const trail: Record<string, TrailNode> = {};
+  const rmiVersions: RuleVersion[] = [];
 
   for (const v of versions) {
     if (contentHash(v.parameters) !== v.contentHash) throw new Error(`rule_version ${v.id}: parâmetros não conferem com o content_hash`);
+    if (RMI_RULES[ruleKey(v.ruleCode, v.logicVersion)]) {
+      rmiVersions.push(v);
+      continue;
+    }
     const rule = RULES[ruleKey(v.ruleCode, v.logicVersion)];
     if (!rule) throw new Error(`Sem implementação para ${ruleKey(v.ruleCode, v.logicVersion)}`);
     const params = v.parameters as never;
@@ -89,6 +107,28 @@ export function evaluate(input: ScenarioInput, versions: RuleVersion[], referenc
       aplicavel: hoje.aplicavel, ...(hoje.motivo ? { motivo: hoje.motivo } : {}), elegivelHoje: hoje.elegivel, requisitos: hoje.requisitos, dataProjetada,
     });
     trail[v.ruleCode] = ruleTrail(input, v, hoje.requisitos, referencia);
+  }
+
+  for (const v of rmiVersions) {
+    const rmiInput: RmiInput = { salarios: input.salarios ?? [], inpc: input.inpc ?? {}, correcaoAte: input.correcaoAte ?? null };
+    const alvos = resultados.map((r) => ({ ruleCode: r.ruleCode, data: r.aplicavel ? r.dataProjetada : null }));
+    const out = RMI_RULES[ruleKey(v.ruleCode, v.logicVersion)](ctx, v.parameters as never, rmiInput, alvos);
+    for (const r of resultados) r.rmi = out.porRegra[r.ruleCode];
+    const rule = (param?: string) => ({ code: v.ruleCode, version: v.version, ...(param ? { param } : {}) });
+    trail[v.ruleCode] = {
+      label: v.nome,
+      value: `${v.legalBasis} · versão ${v.version} · ${v.contentHash.slice(0, 12)}`,
+      rule: rule(),
+      children: [
+        {
+          label: "Salário de benefício (média dos salários corrigidos)",
+          value: out.salarioBeneficioCentavos === null ? "—" : `${out.salarioBeneficioCentavos} centavos · ${out.salarios.length} salários`,
+          rule: rule("inicioPeriodoBasico"),
+          children: out.salarios.map((s) => ({ label: s.competencia, value: `${s.valorCentavos} centavos × ${s.fator} = ${s.corrigidoCentavos} centavos` })),
+        },
+        { label: "Correção monetária", value: rmiInput.correcaoAte ? `INPC (IBGE, tabela 1736) até ${rmiInput.correcaoAte}` : "sem índice disponível" },
+      ],
+    };
   }
   return { resultados, trail };
 }

@@ -1,7 +1,7 @@
 import { brDate } from "@/format";
 import { union } from "@/timeline/timeline";
-import type { Resultado, RuleVersion, ScenarioInput } from "./evaluate";
-import { earliest, humanize, inDisplayOrder, paramValue, requirementText, verdict } from "./present";
+import type { Resultado, RuleVersion, ScenarioInput, TrailNode } from "./evaluate";
+import { earliest, humanize, inDisplayOrder, paramValue, requirementText, RMI_RESSALVA, rmiBasis, rmiValue, verdict } from "./present";
 
 // Self-contained printable HTML report of one calculation_run (no external assets; opens offline, prints cleanly).
 
@@ -14,6 +14,8 @@ export type ReportData = {
   pdfSha256: string;
   input: ScenarioInput;
   resultados: Resultado[];
+  /** Salário de benefício and the corrected salários (runs with an RMI rule version only). */
+  rmiTrail?: TrailNode;
   versions: Map<number, RuleVersion>;
 };
 
@@ -35,7 +37,7 @@ export function renderReport(d: ReportData): string {
         .join("");
       return `<section class="rule">
   <h3>${esc(r.nome)} <small>${esc(r.legalBasis)} · versão ${r.version} · ${esc(version?.contentHash.slice(0, 12) ?? "")}</small></h3>
-  <p class="verdict ${v.kind}">${esc(v.text)}</p>${r.motivo ? `\n  <p class="muted">${esc(r.motivo)}</p>` : ""}
+  <p class="verdict ${v.kind}">${esc(v.text)}</p>${r.motivo ? `\n  <p class="muted">${esc(r.motivo)}</p>` : ""}${r.rmi ? `\n  <p>Valor estimado (RMI): <strong>${esc(rmiValue(r.rmi))}</strong> <span class="muted">· ${esc(rmiBasis(r.rmi))}</span></p>` : ""}
   ${reqs ? `<table><thead><tr><th></th><th>Requisito</th><th>Situação em ${esc(brDate(d.referenceDate))}</th><th>Parâmetro</th></tr></thead><tbody>${reqs}</tbody></table>` : ""}
 </section>`;
     })
@@ -43,6 +45,13 @@ export function renderReport(d: ReportData): string {
   const periodos = d.input.periodos
     .map((p) => `<tr><td>${esc(p.seq ?? "?")}</td><td>${esc(p.origem ?? "—")}</td><td>${esc(union(p.intervalos).map((i) => humanize(`${i.inicio}..${i.fim}`)).join(", "))}</td><td>p. ${p.source.page}, l. ${p.source.line}</td><td>${p.editIds.length ? `edições nº ${p.editIds.join(", ")}` : "—"}</td></tr>`)
     .join("");
+  const media = d.rmiTrail?.children?.[0];
+  const salarios = (media?.children ?? []).map((n) => `<tr><td>${esc(humanize(n.label))}</td><td>${esc(humanize(n.value ?? ""))}</td></tr>`).join("");
+  const rmiSection = media
+    ? `<h2>Salários corrigidos (RMI)</h2>
+<p>${esc(humanize(media.label))}: <strong>${esc(humanize(media.value ?? ""))}</strong>. ${esc(humanize(d.rmiTrail?.children?.[1]?.value ?? ""))}. ${esc(RMI_RESSALVA)}</p>
+<table><thead><tr><th>Competência</th><th>Salário × fator INPC = corrigido</th></tr></thead><tbody>${salarios}</tbody></table>`
+    : "";
 
   return `<!doctype html>
 <html lang="pt-BR">
@@ -75,9 +84,10 @@ export function renderReport(d: ReportData): string {
 <h1>${esc(d.clientLabel)}</h1>
 <p>${esc(d.filiado.nome ?? "—")} · NIT ${esc(d.filiado.nit ?? "—")} · nascimento ${esc(d.input.nascimento ? brDate(d.input.nascimento.value) : "—")} · sexo ${d.input.sexo === "F" ? "feminino" : d.input.sexo === "M" ? "masculino" : "—"}</p>
 <p class="muted">Cálculo nº ${d.runId} · referência ${esc(brDate(d.referenceDate))} · gerado em ${esc(dateTime.format(d.createdAt))}</p>
-${first ? `<p class="highlight">Regra atingida mais cedo: <strong>${esc(first.nome)}</strong> (${esc(verdict(first).text.toLowerCase())}). Mais cedo não significa mais vantajoso: o valor do benefício não é calculado.</p>` : ""}
+${first ? `<p class="highlight">Regra atingida mais cedo: <strong>${esc(first.nome)}</strong> (${esc(verdict(first).text.toLowerCase())}). Mais cedo não significa mais vantajoso${d.rmiTrail ? ": compare também o valor estimado de cada regra" : ": este cálculo não estimou o valor do benefício"}.</p>` : ""}
 <h2>Cenários</h2>
 ${rules}
+${rmiSection}
 <h2>Períodos contados</h2>
 <table><thead><tr><th>Seq.</th><th>Origem</th><th>Intervalos</th><th>No CNIS</th><th>Alterado por</th></tr></thead><tbody>${periodos || '<tr><td colspan="5">Nenhum período contado.</td></tr>'}</tbody></table>
 <footer>

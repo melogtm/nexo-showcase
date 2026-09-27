@@ -90,6 +90,27 @@ New runs now pick v2; old runs still re-execute with v1. Follow the same procedu
 - The report is served by `.../cenarios/[runId]/relatorio` (`?download` makes it an attachment) with `Cache-Control: private, no-store`.
 - The scenarios page shows each requirement in a `<details>` holding its trail: the parameter and its value, the periods with their CNIS page/line/raw text, and links to the edits (`/analises/:id#edit-N`, highlighted through `:target`).
 
-## 9. Stretch (only after stages 2–5 are green)
+## 9. RMI as built (stage 7a)
+- **Parameters:** the `EC103_ART26_RMI` rule version (`drizzle/0008_seed_inpc_rmi.sql`) holds the period start (07/1994), 60% + 2% per whole year above 15 (F) / 20 (M) years, the 100% rate for `INTEGRAL`, and `formulaPorRegra`, which picks the formula for each rule:
+  - `COEFICIENTE`: arts. 15, 16 and 19;
+  - `INTEGRAL`: art. 20, which pays 100%;
+  - `FATOR_PREVIDENCIARIO`: art. 17. It is not computed, and the result says why.
+
+  All `[VALIDAR]`.
+- **Logic:** `src/rules/ec103-art26.v1.ts`, registered in `RMI_RULES`. `evaluate` runs it after the eligibility rules, on each rule's date (today or projected), and attaches `Resultado.rmi`. The trail node is `trail.EC103_ART26_RMI`, with one child per corrected salary.
+- **Index:** `inpc_indice` holds IBGE SIDRA table 1736, variable 2289, from 06/1994. It is append-only; a newly published month is a new migration.
+  - `createRun` corrects salaries to the latest index **before** the reference month, and freezes the salaries, the indices used and `correcaoAte` into the snapshot. That keeps reruns independent of the table.
+  - A missing index is a hard error.
+  - Factor = INPC(correcaoAte) / INPC(competência), and 1 from `correcaoAte` onwards `[VALIDAR]`.
+- **Money:** BigInt, with the index scaled by 10¹³ and half-up rounding at each step (corrected salary, average, RMI). No float, no decimal library.
+- **Salaries:** the OK competências of OK períodos, with concurrent salaries in the same month summed. Divisor = number of salaries.
+- **Simplifications** (`[VALIDAR]`, shown in the UI via `RMI_RESSALVA` in `present.ts`):
+  - no teto limit on salaries;
+  - no piso or teto on the RMI;
+  - benefit periods add no salary;
+  - a projected date uses today's average in today's money: future salaries are not guessed.
+- **Old runs** have no RMI version and no salaries in their snapshot, so they re-run identically. The UI says "este cálculo não estimou o valor".
+
+## 10. Stretch (only after stages 2–5 are green)
 1. RMI: the average of 100% of salaries since 07/1994, corrected by INPC (index table loaded from CSV), with a coefficient of 60% + 2% per year above the threshold `[VALIDAR]`. This is where a decimal library earns its place (index factors). Until then, integer centavos are enough.
 2. A petition draft from a template, filled with the chosen scenario's values and citing the trail. An LLM is allowed here, and only here.

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { brDate } from "@/format";
 import type { Resultado, RuleVersion, TrailNode } from "@/scenarios/evaluate";
-import { earliest, humanize, inDisplayOrder, paramValue, requirementText, verdict } from "@/scenarios/present";
+import { earliest, humanize, inDisplayOrder, paramValue, requirementText, RMI_RESSALVA, rmiBasis, rmiValue, verdict } from "@/scenarios/present";
 import { loadRunView } from "@/scenarios/store";
 import { ReexecutarButton } from "../buttons";
 
@@ -31,7 +31,11 @@ export default async function ScenariosPage({ params }: { params: Promise<{ id: 
         {first && (
           <p className="highlight">
             Regra atingida mais cedo: <strong>{first.nome}</strong>, {verdict(first).text.toLowerCase()}.{" "}
-            <span className="muted">Mais cedo não quer dizer mais vantajoso: o valor do benefício ainda não é calculado.</span>
+            <span className="muted">
+              {run.result.some((r) => r.rmi)
+                ? "Mais cedo não quer dizer mais vantajoso: compare também o valor estimado de cada regra."
+                : "Mais cedo não quer dizer mais vantajoso: este cálculo não estimou o valor do benefício."}
+            </span>
           </p>
         )}
         <div className="toolbar">
@@ -41,7 +45,7 @@ export default async function ScenariosPage({ params }: { params: Promise<{ id: 
         </div>
         <div className="scenarios">
           {inDisplayOrder(run.result).map((r) => (
-            <Scenario key={r.ruleCode} r={r} trail={run.trail[r.ruleCode]} version={versions.get(r.ruleVersionId)} analysisId={analysis.id} />
+            <Scenario key={r.ruleCode} r={r} trail={run.trail[r.ruleCode]} rmiTrail={run.trail.EC103_ART26_RMI} version={versions.get(r.ruleVersionId)} analysisId={analysis.id} />
           ))}
         </div>
         <p className="muted small">
@@ -53,7 +57,7 @@ export default async function ScenariosPage({ params }: { params: Promise<{ id: 
   );
 }
 
-function Scenario({ r, trail, version, analysisId }: { r: Resultado; trail?: TrailNode; version?: RuleVersion; analysisId: number }) {
+function Scenario({ r, trail, rmiTrail, version, analysisId }: { r: Resultado; trail?: TrailNode; rmiTrail?: TrailNode; version?: RuleVersion; analysisId: number }) {
   const v = verdict(r);
   return (
     <section className={`card scenario is-${v.kind}`}>
@@ -83,7 +87,37 @@ function Scenario({ r, trail, version, analysisId }: { r: Resultado; trail?: Tra
           );
         })}
       </ul>
+      {r.rmi && (
+        <div className="rmi">
+          <p className="eyebrow">Valor estimado (RMI)</p>
+          <details className="trail">
+            <summary>{rmiValue(r.rmi)}</summary>
+            <p className="small muted">{rmiBasis(r.rmi)}. {RMI_RESSALVA}</p>
+            {r.rmi.valorCentavos !== null && rmiTrail && <RmiTrail node={rmiTrail} analysisId={analysisId} />}
+          </details>
+        </div>
+      )}
     </section>
+  );
+}
+
+/** The salários list is long (one line per month since 07/1994), so it opens separately. */
+function RmiTrail({ node, analysisId }: { node: TrailNode; analysisId: number }) {
+  const [media, ...rest] = node.children ?? [];
+  return (
+    <div className="small">
+      <p className="muted">{node.label} · {node.value}</p>
+      {media && (
+        <>
+          <p>{media.label}: <strong>{humanize(media.value ?? "")}</strong></p>
+          {rest.map((n) => <p key={n.label} className="muted">{n.label}: {humanize(n.value ?? "")}</p>)}
+          <details className="trail">
+            <summary>Ver salários corrigidos</summary>
+            <TrailList nodes={media.children ?? []} analysisId={analysisId} />
+          </details>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -92,7 +126,7 @@ function TrailList({ nodes, analysisId }: { nodes: TrailNode[]; analysisId: numb
     <ul className="trail-list">
       {nodes.map((n) => (
         <li key={`${n.label}-${n.value}`}>
-          <span>{n.label}</span>
+          <span>{humanize(n.label)}</span>
           {n.value && <span className="muted"> · {humanize(n.value)}</span>}
           {n.source && (
             <div className="small muted">

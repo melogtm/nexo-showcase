@@ -1,6 +1,7 @@
-import { and, asc, desc, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { canonicalJson } from "@/rules/core";
+import type { RmiInput } from "@/rules/ec103-art26.v1";
 import { getAnalysis } from "@/ingestion/ingest";
 import { loadReview } from "@/timeline/review";
 import { type RuleVersion, evaluate, missingInputs, scenarioInput } from "./evaluate";
@@ -29,7 +30,8 @@ export async function createRun(analysisId: number, referencia: string): Promise
   const review = await loadReview(analysisId);
   if (!review?.timeline || !review.analysis.extraction) throw new ScenarioError("Análise sem linha do tempo.");
   const sexoEditIds = review.edits.filter((e) => e.target === "filiado" && e.field === "sexo").map((e) => e.id);
-  const input = scenarioInput(review.analysis.extraction, review.timeline, sexoEditIds);
+  const base = scenarioInput(review.analysis.extraction, review.timeline, sexoEditIds);
+  const input = { ...base, ...(await inpcFor(base.salarios ?? [], referencia)) };
   const missing = missingInputs(input);
   if (missing.length) throw new ScenarioError(missing.join(" "));
 
@@ -48,6 +50,19 @@ export async function createRun(analysisId: number, referencia: string): Promise
     })
     .returning({ id: schema.calculationRun.id });
   return row.id;
+}
+
+/**
+ * The INPC numbers a run needs, frozen into its snapshot: the latest index published before the reference month
+ * (what the salários are corrected to) and the index of every salário's competência.
+ */
+async function inpcFor(salarios: RmiInput["salarios"], referencia: string): Promise<Pick<RmiInput, "inpc" | "correcaoAte">> {
+  const t = schema.inpcIndice;
+  const db = await getDb();
+  const [latest] = await db.select({ competencia: t.competencia }).from(t).where(lt(t.competencia, referencia.slice(0, 7))).orderBy(desc(t.competencia)).limit(1);
+  const months = [...new Set([...salarios.map((s) => s.competencia), ...(latest ? [latest.competencia] : [])])];
+  const rows = months.length ? await db.select().from(t).where(inArray(t.competencia, months)) : [];
+  return { inpc: Object.fromEntries(rows.map((r) => [r.competencia, r.indice])), correcaoAte: latest?.competencia ?? null };
 }
 
 /** Rule versions by id (a run's own versions, never "the version in force today"). */

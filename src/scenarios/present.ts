@@ -1,5 +1,6 @@
-import { brDate, brDuracao, brNumber } from "@/format";
+import { brDate, brDuracao, brMoney, brNumber } from "@/format";
 import type { Requisito } from "@/rules/core";
+import type { Rmi } from "@/rules/ec103-art26.v1";
 import { union } from "@/timeline/timeline";
 import type { Resultado } from "./evaluate";
 
@@ -29,18 +30,32 @@ export function verdict(r: Resultado): Verdict {
   return { kind: "na", text: "Não atinge em 60 anos" };
 }
 
+export const rmiValue = (rmi: Rmi) => (rmi.valorCentavos === null ? "Não estimado" : `R$ ${brMoney(rmi.valorCentavos)}`);
+/** [VALIDAR] The simplifications of the RMI estimate (rule-engine §9), shown wherever a value is. */
+export const RMI_RESSALVA =
+  "Estimativa: sem teto nos salários, sem piso nem teto no benefício, períodos de benefício sem salário, e a média de hoje (na moeda do mês de correção) também para datas futuras.";
+export function rmiBasis(rmi: Rmi) {
+  if (rmi.valorCentavos === null) return rmi.motivo ?? "";
+  const base = `${rmi.coeficientePct}% da média dos salários corrigidos`;
+  return rmi.formula === "INTEGRAL" ? `${base} (percentual integral desta regra)` : `${base}, com ${rmi.anosContribuicao} anos de contribuição na data de elegibilidade`;
+}
+
 /** The rule reached first (today counts as earliest). Earliest is not "most advantageous": the benefit amount is not computed. */
 export function earliest(rs: Resultado[]): Resultado | undefined {
   return rs.filter((r) => r.aplicavel && r.dataProjetada).sort((a, b) => a.dataProjetada!.localeCompare(b.dataProjetada!))[0];
 }
 
 const RANGES = /^\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}(, \d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2})*$/;
-/** Trail values are stored raw (ISO dates, `a..b` ranges); make them readable, merging consecutive ranges. */
+/** Trail text is stored raw (ISO dates and months, `a..b` ranges, `N centavos`); make it readable, merging consecutive ranges. */
 export function humanize(value: string) {
   const merged = RANGES.test(value)
     ? union(value.split(", ").map((r) => ({ inicio: r.slice(0, 10), fim: r.slice(12) }))).map((i) => `${i.inicio}..${i.fim}`).join(", ")
     : value;
-  return merged.replace(/(\d{4})-(\d{2})-(\d{2})/g, "$3/$2/$1").replace(/\.\./g, " a ");
+  return merged
+    .replace(/(\d{4})-(\d{2})-(\d{2})/g, "$3/$2/$1")
+    .replace(/\b(\d{4})-(\d{2})\b/g, "$2/$1")
+    .replace(/\b(\d+) centavos/g, (_, c: string) => `R$ ${brMoney(Number(c))}`)
+    .replace(/\.\./g, " a ");
 }
 
 /** Value of a dotted parameter path such as `tempoMinimoAnos.F`. */

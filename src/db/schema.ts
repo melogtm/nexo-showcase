@@ -1,4 +1,4 @@
-import { bigint, customType, date, index, integer, jsonb, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
+import { bigint, customType, date, index, integer, jsonb, numeric, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 import type { CnisExtraction } from "@/cnis/parse";
 import type { Resultado, RuleVersion, ScenarioInput, TrailNode } from "@/scenarios/evaluate";
 
@@ -70,4 +70,10 @@ export const calculationRun = pgTable("calculation_run", {
   result: jsonb().$type<Resultado[]>().notNull(),
   trail: jsonb().$type<Record<string, TrailNode>>().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** INPC number index (IBGE SIDRA table 1736, dez/1993 = 100), used to correct salários for the RMI. Append-only: published months never change. */
+export const inpcIndice = pgTable("inpc_indice", {
+  competencia: text().primaryKey(), // YYYY-MM
+  indice: numeric().notNull(), // exact decimal, read as a string
 });
