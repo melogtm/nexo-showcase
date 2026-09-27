@@ -7,7 +7,7 @@ description: Close a Nexo roadmap stage (see CLAUDE.md "Roadmap"). Runs tests/ty
 
 Every stage ends with passing checks and one commit. The next stage never starts on a broken one. Run these steps in order and stop at the first failure.
 
-1. **Checks.** `npm test && npx tsc --noEmit && npm run lint && npm run build`. Red → fix the root cause (use superpowers:systematic-debugging), then start again from step 1.
+1. **Checks.** `npm test && npx tsc --noEmit && npm run lint && npm run build`. Red → fix the root cause (use superpowers:systematic-debugging), then start again from step 1. Gate on the **exit code**. Never pipe the checks into `grep`/`tail` in the same `&&` chain as the commit: the pipe returns the filter's status and hides a red run.
 2. **Spec review.** Dispatch the `spec-guardian` agent. Fix every violation. For a `?` finding, fix it or tell the user why it stands.
 3. **React review.** `npm run doctor -- --verbose --scope changed`. Fix real findings and ignore pure style.
 4. **Over-engineering review.** Run `ponytail:ponytail-review` on the stage diff. Apply the cuts that don't break an invariant.
