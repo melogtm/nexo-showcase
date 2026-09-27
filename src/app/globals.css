@@ -174,3 +174,53 @@ td:first-child { white-space: normal; font-weight: 600; }
 .fragments li { padding: 0.5rem 0; border-bottom: 1px solid var(--line); }
 .problem-row td { border-bottom: 1px solid var(--line); padding-top: 0; white-space: normal; }
 td a { color: inherit; text-decoration-color: var(--red); text-underline-offset: 3px; }
+
+/* Review screen */
+/* Status colors are reserved for state (with icon + label); counted time is ink, not red, so it never reads as "Revisar". */
+:root { --chart-ok: #7e7e7e; --chart-union: #343431; --status-warning: #fab219; --status-critical: #d03b3b; --gap: rgb(194 45 45 / 8%); }
+@media (prefers-color-scheme: dark) { :root { --chart-ok: #8a8a85; --chart-union: #ecece8; --status-critical: #e0524f; --gap: rgb(224 82 79 / 12%); } }
+.tiles { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.tile { display: grid; gap: 0.35rem; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 1.1rem 1.25rem; }
+.tile .eyebrow { margin: 0; }
+.tile-value { font: 400 2rem/1.1 var(--font-serif), Georgia, serif; color: var(--red); }
+.inline-form { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; }
+.inline-form label { flex: 1 1 320px; }
+select { font: inherit; padding: 0.55rem 0.6rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 4px; max-width: 240px; }
+.button-quiet { background: transparent; color: var(--red); box-shadow: inset 0 0 0 1px var(--red); }
+.chart-scroll { overflow-x: auto; }
+.timeline-chart { display: block; width: 100%; min-width: 640px; height: auto; font-family: var(--font-sans), sans-serif; }
+.chart-grid { stroke: var(--line); stroke-width: 1; }
+.chart-axis { fill: var(--muted); font-size: 11px; }
+.chart-label { fill: var(--ink); font-size: 12px; }
+.chart-label-strong { font-weight: 700; }
+.chart-gap { fill: var(--gap); }
+.chart-bar { stroke: var(--surface); stroke-width: 1; }
+.is-ok.chart-bar, .swatch.is-ok { fill: var(--chart-ok); background: var(--chart-ok); }
+.is-pendente.chart-bar, .swatch.is-pendente { fill: var(--status-warning); background: var(--status-warning); }
+.is-revisar.chart-bar, .swatch.is-revisar { fill: var(--status-critical); background: var(--status-critical); }
+.is-excluido.chart-bar { fill: none; stroke: var(--muted); stroke-dasharray: 3 2; }
+.swatch.is-excluido { border: 1px dashed var(--muted); }
+.is-union.chart-bar, .swatch.is-union { fill: var(--chart-union); background: var(--chart-union); }
+.swatch.is-gap { background: var(--gap); border: 1px solid var(--line); }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; list-style: none; margin: 0 0 0.75rem; padding: 0; font-size: 0.8rem; color: var(--muted); }
+.chart-legend li { display: flex; align-items: center; gap: 0.4rem; }
+.swatch { display: inline-block; width: 14px; height: 10px; border-radius: 2px; }
+.periodos { list-style: none; margin: 0; padding: 0; display: grid; }
+.periodo { padding: 1rem 0; border-bottom: 1px solid var(--line); display: grid; gap: 0.4rem; }
+.periodo-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.75rem; }
+.periodo-dates { margin: 0; }
+.motivos { margin: 0; padding: 0; list-style: none; font-size: 0.85rem; display: grid; gap: 0.2rem; }
+.motivos li { color: var(--ink); }
+.motivos .aviso { color: var(--muted); }
+.badge.status-ok { color: var(--muted); }
+.badge.status-pendente { color: var(--ink); border-color: var(--status-warning); background: color-mix(in srgb, var(--status-warning) 18%, transparent); }
+.badge.status-revisar { color: var(--red); }
+.badge.status-excluido { color: var(--muted); border-style: dashed; }
+.is-excluido .periodo-head strong, .is-excluido .periodo-dates { text-decoration: line-through; color: var(--muted); }
+details summary { cursor: pointer; color: var(--red); font-size: 0.85rem; font-weight: 600; width: fit-content; }
+.editor { display: grid; gap: 0.75rem; margin-top: 0.75rem; max-width: 560px; }
+.editor-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.editor-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.two-col { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.plain { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; font-size: 0.9rem; }
+td.wrap { white-space: normal; min-width: 12ch; }

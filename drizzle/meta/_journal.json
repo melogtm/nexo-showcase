@@ -15,6 +15,20 @@
       "when": 1790478760487,
       "tag": "0001_extraction",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790479599168,
+      "tag": "0002_review",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790479600213,
+      "tag": "0003_seed_indicators",
+      "breakpoints": true
     }
   ]
 }

@@ -71,7 +71,7 @@ Code and identifiers are in English. Domain terms stay in Portuguese when there'
 ## Roadmap (one stage at a time)
 1. ✅ Skeleton, DB and upload with hash.
 2. ✅ Synthetic CNIS generator plus a parser with `SourceRef` and `UnparsedFragment`.
-3. Timeline normalisation plus the review screen with audited edits.
+3. ✅ Timeline normalisation plus the review screen with audited edits.
 4. Versioned rule engine, the five rules, and a reproducible `calculation_run` with a reproducibility test.
 5. Scenarios screen with a clickable trail, plus HTML export.
 6. H1 evaluation script (`npm run eval:h1`).

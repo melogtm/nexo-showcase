@@ -17,7 +17,7 @@ Page chrome (header, standalone issue timestamp, footer, authenticity note) and 
 
 **`Relações Previdenciárias`:** each vínculo is a block that **repeats its own column-header row**. There are two variants:
 - Employment or contribution: `Seq. | NIT | Código Emp.* | Origem do Vínculo | Data Início | Data Fim | Tipo Filiado no Vínculo | Últ. Remun. | Indicadores`. \*The 2017 issue calls it `CNPJ/CEI/CPF`. Origem holds the employer name, `Tipo Filiado` holds e.g. `Empregado`, `Últ. Remun.` is `MM/yyyy`, and Indicadores is e.g. `PEXT`.
-- Benefit: `Seq. | NIT | NB | Origem do Vínculo | Espécie | Data Início | Data Fim | Situação`, e.g. `Benefício`, `80 - AUXILIO SALARIO MATERNIDADE`, `CESSADO`. Whether and how benefit periods count toward contribution time is a **domain question**: mark them `REVISAR` and ask. Don't invent a rule.
+- Benefit: `Seq. | NIT | NB | Origem do Vínculo | Espécie | Data Início | Data Fim | Situação`, e.g. `Benefício`, `80 - AUXILIO SALARIO MATERNIDADE`, `CESSADO`. **Team decision (2026-09-27): benefit periods count toward contribution time.** Whether they count toward **carência** is undecided, so they're excluded from it and the UI says so. Ask before changing this.
 - `Data Fim` can be empty (a vínculo with no end date, see §4).
 - `[VALIDAR]` In the blanked UNILAB model, the `Remunerações` subtitle sits on the **same line** as the vínculo row, so it lands in `Origem do Vínculo`. If real extracts do the same, the parser must split it off. Check this against the first real extract.
 
@@ -57,9 +57,13 @@ An **unknown indicator → `REVISAR`**, never ignored.
 - **Vínculo without an end date:** if later remunerações exist, infer the end from the last competência and mark `REVISAR` with a reason. If none exist, mark `REVISAR`.
 - **Overlap (concomitância):** overlapping periods count **once** toward contribution time. Show the overlap visually. Don't add up concurrent salaries in the MVP; just flag them.
 - **Gaps (lacunas):** intervals with no vínculo or contribution between the first and last period. List each with its duration.
-- **Competências below the minimum** (after 13/11/2019 `[VALIDAR]`): they don't count toward carência or contribution time unless topped up. Mark them. The cut-off date is a rule parameter, not a constant.
+- **Competências below the minimum:** they don't count toward carência or contribution time unless topped up. **Implemented through the INSS's own `PREC-MENOR-MIN` indicator** (catalog effect `PENDENCIA`), so no cut-off date or minimum-wage table lives in our code. `[VALIDAR]` whether INSS flags every case.
 - **Special-period candidates:** vínculos with a harmful-agent indicator are flagged `CANDIDATO_ESPECIAL`, counted as regular time, with an explicit warning. Classifying special periods needs PPP/LTCAT/CNAE documents that are outside the CNIS, so it's out of scope.
-- Row status: `OK` | `PENDENTE` | `REVISAR`, plus `statusMotivo`.
+- Row status: `OK` | `PENDENTE` | `REVISAR` | `EXCLUIDO`, with `motivos[]` (these change the status) and `avisos[]` (shown, no effect).
+- **Only `OK` counts.** `PENDENTE` and `REVISAR` time is shown separately as "em análise".
+- The lawyer's `CONFIRMAR` makes a período (and its readable competências) `OK` when its dates are usable. `EXCLUIR` removes it from the count. `""` reopens it.
+- `[VALIDAR]` A contribuinte individual / facultativo counts **paid competências as whole months**, not the vínculo range.
+- `[VALIDAR]` Years/months/days are display-only, using 365/30 days (`brDuracao`). All maths is in days.
 
 ## 5. Counting
 - **Contribution time** is calendar days, **inclusive**, over the **union** of intervals (no double counting). Display it as years/months/days.
@@ -83,6 +87,14 @@ Given a PDF and a hand-annotated JSON answer key (the correct vínculos and comp
 - `src/cnis/parse.ts`: `parseLines` / `parseCnis`, the types and `PARSER_VERSION`.
 - `src/cnis/synthetic.ts`: `renderCnis`, the generator.
 - `public/cnis-exemplo-sintetico.pdf`: the downloadable demo, kept parseable by a test.
+- `src/timeline/timeline.ts`: `buildTimeline` (pure).
+- `src/timeline/review.ts`: the DB side (catalog, `manual_edit`, `loadReview`).
+- `src/app/(app)/analises/[id]`: the review screen, its actions and the SVG chart.
 - The whole `CnisExtraction` is stored **immutable** in `analysis.extraction` (jsonb), with `analysis.parser_version`. There are no per-row tables for raw data.
-- Stage 3 adds `manual_edit(analysis_id, target, field, old_value, new_value, justificativa, edited_at)`, which is append-only and replayed by `buildTimeline`, plus `indicator_catalog(code, descricao, efeito)`.
+- `manual_edit(analysis_id, target, field, old_value, new_value, justificativa, edited_by, edited_at)`:
+  - A database trigger rejects UPDATE and DELETE.
+  - `target` is `vinculo:<index into extraction.vinculos>` or `filiado`.
+  - `field` is `dataInicio` | `dataFim` | `decisao` (for vínculos) or `sexo` (for the filiado).
+  - Rows are replayed by id, and the last write wins.
+- `indicator_catalog(code, descricao, efeito)` is seeded by migration `[VALIDAR]`. An unknown code means `REVISAR`.
 - Sex isn't reliably in the CNIS, so ask for it on the review screen.
