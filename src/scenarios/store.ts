@@ -8,11 +8,6 @@ import { type RuleVersion, evaluate, missingInputs, scenarioInput } from "./eval
 
 export class ScenarioError extends Error {}
 
-const toRuleVersion = (r: typeof schema.ruleVersion.$inferSelect): RuleVersion => ({
-  id: r.id, ruleCode: r.ruleCode, version: r.version, nome: r.nome, legalBasis: r.legalBasis,
-  logicVersion: r.logicVersion, parameters: r.parameters, contentHash: r.contentHash,
-});
-
 /** For a new run: the latest version of each rule in force on the reference date. */
 export async function activeRuleVersions(referencia: string): Promise<RuleVersion[]> {
   const t = schema.ruleVersion;
@@ -22,7 +17,7 @@ export async function activeRuleVersions(referencia: string): Promise<RuleVersio
     .where(and(lte(t.validFrom, referencia), or(isNull(t.validTo), gt(t.validTo, referencia))))
     .orderBy(asc(t.ruleCode), desc(t.version));
   const latest = new Map<string, RuleVersion>();
-  for (const r of rows) if (!latest.has(r.ruleCode)) latest.set(r.ruleCode, toRuleVersion(r));
+  for (const r of rows) if (!latest.has(r.ruleCode)) latest.set(r.ruleCode, r);
   return [...latest.values()];
 }
 
@@ -68,7 +63,7 @@ async function inpcFor(salarios: RmiInput["salarios"], referencia: string): Prom
 /** Rule versions by id (a run's own versions, never "the version in force today"). */
 export async function ruleVersionsByIds(ids: number[]): Promise<Map<number, RuleVersion>> {
   const rows = ids.length ? await (await getDb()).select().from(schema.ruleVersion).where(inArray(schema.ruleVersion.id, ids)) : [];
-  return new Map(rows.map((r) => [r.id, toRuleVersion(r)]));
+  return new Map(rows.map((r) => [r.id, r]));
 }
 
 export async function getRun(runId: number) {

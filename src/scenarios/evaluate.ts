@@ -114,16 +114,13 @@ export function evaluate(input: ScenarioInput, versions: RuleVersion[], referenc
     const alvos = resultados.map((r) => ({ ruleCode: r.ruleCode, data: r.aplicavel ? r.dataProjetada : null }));
     const out = RMI_RULES[ruleKey(v.ruleCode, v.logicVersion)](ctx, v.parameters as never, rmiInput, alvos);
     for (const r of resultados) r.rmi = out.porRegra[r.ruleCode];
-    const rule = (param?: string) => ({ code: v.ruleCode, version: v.version, ...(param ? { param } : {}) });
     trail[v.ruleCode] = {
-      label: v.nome,
-      value: `${v.legalBasis} · versão ${v.version} · ${v.contentHash.slice(0, 12)}`,
-      rule: rule(),
+      ...versionNode(v),
       children: [
         {
           label: "Salário de benefício (média dos salários corrigidos)",
           value: out.salarioBeneficioCentavos === null ? "—" : `${out.salarioBeneficioCentavos} centavos · ${out.salarios.length} salários`,
-          rule: rule("inicioPeriodoBasico"),
+          rule: ruleRef(v, "inicioPeriodoBasico"),
           children: out.salarios.map((s) => ({ label: s.competencia, value: `${s.valorCentavos} centavos × ${s.fator} = ${s.corrigidoCentavos} centavos` })),
         },
         { label: "Correção monetária", value: rmiInput.correcaoAte ? `INPC (IBGE, tabela 1736) até ${rmiInput.correcaoAte}` : "sem índice disponível" },
@@ -152,8 +149,10 @@ function project(met: (date: string) => boolean, from: string): string | null {
   return null;
 }
 
+const ruleRef = (v: RuleVersion, param?: string) => ({ code: v.ruleCode, version: v.version, ...(param ? { param } : {}) });
+const versionNode = (v: RuleVersion): TrailNode => ({ label: v.nome, value: `${v.legalBasis} · versão ${v.version} · ${v.contentHash.slice(0, 12)}`, rule: ruleRef(v) });
+
 function ruleTrail(input: ScenarioInput, v: RuleVersion, requisitos: Requisito[], referencia: string): TrailNode {
-  const rule = (param?: string) => ({ code: v.ruleCode, version: v.version, ...(param ? { param } : {}) });
   const periodNodes: TrailNode[] = input.periodos.map((p) => ({
     label: `${p.seq ?? "?"} · ${p.origem ?? "—"}`,
     value: p.intervalos.map((i) => `${i.inicio}..${i.fim}`).join(", "),
@@ -161,13 +160,11 @@ function ruleTrail(input: ScenarioInput, v: RuleVersion, requisitos: Requisito[]
     ...(p.editIds.length ? { editIds: p.editIds } : {}),
   }));
   return {
-    label: v.nome,
-    value: `${v.legalBasis} · versão ${v.version} · ${v.contentHash.slice(0, 12)}`,
-    rule: rule(),
+    ...versionNode(v),
     children: requisitos.map((r) => ({
       label: r.label,
       value: `${r.atual} / ${r.exigido} (${r.unidade}) em ${referencia}`,
-      rule: rule(r.param),
+      rule: ruleRef(v, r.param),
       children:
         r.id === "idade"
           ? [{ label: "Data de nascimento", value: input.nascimento!.value, source: input.nascimento!.source }, { label: "Sexo", value: input.sexo!, ...(input.sexoEditIds.length ? { editIds: input.sexoEditIds } : {}) }]
