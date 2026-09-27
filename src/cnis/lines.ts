@@ -1,4 +1,7 @@
 import { getDocument, VerbosityLevel } from "pdfjs-dist/legacy/build/pdf.mjs";
+// Static import on purpose: it sets globalThis.pdfjsWorker, so pdfjs skips its dynamic import() of the worker,
+// which Vercel's file tracing cannot see (the deployed function crashed with "Cannot find module pdf.worker.mjs").
+import "pdfjs-dist/legacy/build/pdf.worker.mjs";
 
 /** A text run on a line, in PDF points (x grows rightwards). */
 export type Segment = { text: string; x: number; width: number };

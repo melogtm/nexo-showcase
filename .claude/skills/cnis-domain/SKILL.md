@@ -17,7 +17,7 @@ Page chrome (header, standalone issue timestamp, footer, authenticity note) and 
 
 **`Relações Previdenciárias`:** each vínculo is a block that **repeats its own column-header row**. There are two variants:
 - Employment or contribution: `Seq. | NIT | Código Emp.* | Origem do Vínculo | Data Início | Data Fim | Tipo Filiado no Vínculo | Últ. Remun. | Indicadores`. \*The 2017 issue calls it `CNPJ/CEI/CPF`. Origem holds the employer name, `Tipo Filiado` holds e.g. `Empregado`, `Últ. Remun.` is `MM/yyyy`, and Indicadores is e.g. `PEXT`.
-- Benefit: `Seq. | NIT | NB | Origem do Vínculo | Espécie | Data Início | Data Fim | Situação`, e.g. `Benefício`, `80 - AUXILIO SALARIO MATERNIDADE`, `CESSADO`. **Team decision (2026-09-27): benefit periods count toward contribution time.** Whether they count toward **carência** is undecided, so they're excluded from it and the UI says so. Ask before changing this.
+- Benefit: `Seq. | NIT | NB | Origem do Vínculo | Espécie | Data Início | Data Fim | Situação`, e.g. `Benefício`, `80 - AUXILIO SALARIO MATERNIDADE`, `CESSADO`. **Team decision (2026-09-27): benefit periods count toward contribution time.** Assumption `[VALIDAR]`: they also count toward **carência** for every month they touch.
 - `Data Fim` can be empty (a vínculo with no end date, see §4).
 - `[VALIDAR]` In the blanked UNILAB model, the `Remunerações` subtitle sits on the **same line** as the vínculo row, so it lands in `Origem do Vínculo`. If real extracts do the same, the parser must split it off. Check this against the first real extract.
 

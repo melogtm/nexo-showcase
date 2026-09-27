@@ -84,11 +84,11 @@ describe("status and reasons", () => {
     expect(t.periodos[0].competencias.map((c) => c.status)).toEqual(["OK", "PENDENTE", "REVISAR"]);
   });
 
-  test("benefit periods count as time (team decision) but not toward carência", () => {
+  test("benefit periods count as time and as carência for every month they touch", () => {
     const t = build(cnis(vinculo(1, { tipo: "BENEFICIO", inicio: "2016-05-10", fim: "2016-09-06" })));
     expect(t.periodos[0]).toMatchObject({ tipo: "BENEFICIO", status: "OK" });
     expect(t.tempo.dias).toBe(120);
-    expect(t.carencia.meses).toBe(0);
+    expect(t.carencia.competencias).toEqual(["2016-05", "2016-06", "2016-07", "2016-08", "2016-09"]);
   });
 
   test("contribuinte individual counts paid competências as whole months", () => {

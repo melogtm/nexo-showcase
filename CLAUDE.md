@@ -52,10 +52,10 @@ evaluate(timeline, ruleVersions, refDate)   → { result, trail }   (src/scenari
 3. An unknown indicator is `REVISAR`, never ignored.
 4. No social-security legal parameter in code: no ages, points, minimum contribution times, or cut-off dates such as 13/11/2019. They live in `rule_version.parameters`. A new value means a new version row. Never edit an old row.
 5. Money is **integer centavos**: a safe-integer `number` in TS/JSON, `bigint` in DB columns, never float math. Domain dates are `Temporal.PlainDate` and competências are `Temporal.PlainYearMonth` (via `temporal-polyfill` until Node ships Temporal). Never the JS `Date` for domain data. `Date` is only for audit timestamps.
-6. Values marked `[VALIDAR]` (not yet checked against the official legal text) go in seed data with a `[VALIDAR]` comment, never as constants.
+6. `[VALIDAR]` marks an **assumption** not checked against the legal text. Legal parameters still live in data (seed rows with a `[VALIDAR]` comment), never as constants.
 7. Privacy: no real CNIS in the repo (`fixtures/real/` is gitignored). Never log CPF, NIT or names. The public deploy gets **synthetic CNIS only**.
 8. Migrations in `drizzle/` are append-only once committed.
-9. When the domain is ambiguous, ask the user. Never invent a legal rule.
+9. When the domain is ambiguous, **pick the most reasonable reading, mark it `[VALIDAR]`, record it in the domain skill, and move on.** It's a school project, not a legal product (team decision, 2026-09-27). Only ask when the choice changes the product itself.
 
 **Brand** (from the pitch deck): red `#C22D2D`, ink `#343431`, grey `#7E7E7E`, paper `#FAFBFA`. Headlines are Instrument Serif (a condensed serif, with an *italic* accent line). Body and labels are Figtree, with small UPPERCASE letter-spaced labels. Thin red rules end in a dot, and the ✱ NEXO mark is used for signatures. Tokens live in `src/app/globals.css`, which has a dark mode. Reuse its classes (`.card`, `.eyebrow`, `.display`, `.button`, `.badge`) before adding new ones. The logo is `public/nexo-logo.png` and the icon is `src/app/icon.svg`.
 

@@ -85,7 +85,16 @@ export function buildTimeline(extraction: CnisExtraction, edits: Edit[], catalog
   const tempoIntervalos = union(counted.flatMap((p) => p.intervalos));
   const emAnalise = union(periodos.filter((p) => p.status === "PENDENTE" || p.status === "REVISAR").flatMap((p) => p.intervalos));
 
-  const carencia = [...new Set(counted.flatMap((p) => p.competencias.filter((c) => c.status === "OK" && c.valorCentavos !== null).map((c) => c.competencia)))].sort();
+  // [VALIDAR] Assumption: every month touched by a counted benefit also counts toward carência.
+  const carencia = [
+    ...new Set(
+      counted.flatMap((p) =>
+        p.tipo === "BENEFICIO"
+          ? p.intervalos.flatMap(monthsOf)
+          : p.competencias.filter((c) => c.status === "OK" && c.valorCentavos !== null).map((c) => c.competencia),
+      ),
+    ),
+  ].sort();
 
   return {
     periodos,
@@ -158,7 +167,7 @@ function buildPeriodo(v: RawVinculo, key: string, edited: (field: string) => str
     }
   }
   if (inicio && fim && Temporal.PlainDate.compare(date(inicio), date(fim)) > 0) flag("REVISAR", "Data de início posterior à data fim");
-  if (tipo === "BENEFICIO") avisos.push("Benefício: conta como tempo de contribuição (decisão da equipe); não entra na carência até confirmação.");
+  if (tipo === "BENEFICIO") avisos.push("Benefício: conta como tempo de contribuição e como carência nos meses que abrange (premissa do projeto).");
 
   const decisao = edited("decisao") as Decisao | undefined;
   const confirmado = decisao === "CONFIRMAR";
@@ -183,6 +192,15 @@ function buildPeriodo(v: RawVinculo, key: string, edited: (field: string) => str
     inicio, fim, fimInferido, status, confirmado, motivos, avisos, competencias, intervalos,
     source: v.source, editIds,
   };
+}
+
+/** YYYY-MM of every month an interval touches. */
+function monthsOf({ inicio, fim }: Intervalo): string[] {
+  const months: string[] = [];
+  for (let m = Temporal.PlainYearMonth.from(inicio.slice(0, 7)); Temporal.PlainYearMonth.compare(m, Temporal.PlainYearMonth.from(fim.slice(0, 7))) <= 0; m = m.add({ months: 1 })) {
+    months.push(m.toString());
+  }
+  return months;
 }
 
 /** Merges overlapping and adjacent intervals. */
