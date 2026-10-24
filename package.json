@@ -16,7 +16,7 @@
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
     "drizzle-orm": "^0.45.3",
-    "next": "16.3.6",
+    "next": "16.4.2",
     "pdfjs-dist": "^6.3.289",
     "postgres": "^3.4.9",
     "react": "19.3.0",
@@ -29,12 +29,17 @@
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
-    "eslint-config-next": "16.3.6",
+    "eslint-config-next": "16.4.2",
     "pdf-lib": "^1.17.1",
     "react-doctor": "^0.9.14",
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.2"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "^0.25.0"
+    }
   },
   "engines": {
     "node": ">=22"
