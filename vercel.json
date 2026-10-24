@@ -1,1 +1,1 @@
-{ "installCommand": "npm ci", "buildCommand": "npm run db:migrate && npm run build" }
+{ "installCommand": "npm ci", "buildCommand": "npm run db:migrate && npm run build", "ignoreCommand": "[ \"$VERCEL_ENV\" != \"production\" ]" }
