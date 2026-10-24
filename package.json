@@ -19,8 +19,8 @@
     "next": "16.4.2",
     "pdfjs-dist": "^6.3.289",
     "postgres": "^3.4.9",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "temporal-polyfill": "^1.0.5"
   },
   "devDependencies": {
