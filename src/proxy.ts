@@ -10,4 +10,5 @@ export function proxy(request: NextRequest) {
   return NextResponse.redirect(new URL("/login", request.url));
 }
 
-export const config = { matcher: ["/((?!_next/static|_next/image|icon.svg|nexo-logo.png).*)"] };
+// api/cron authenticates with CRON_SECRET in its own route handler.
+export const config = { matcher: ["/((?!_next/static|_next/image|icon.svg|nexo-logo.png|api/cron/).*)"] };

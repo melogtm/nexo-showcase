@@ -21,5 +21,6 @@ export async function uploadAnalysis(_prev: UploadState, form: FormData): Promis
     throw e;
   }
   revalidatePath("/");
+  revalidatePath("/analises");
   redirect(`/analises/${id}`);
 }

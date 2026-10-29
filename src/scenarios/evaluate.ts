@@ -27,7 +27,11 @@ export type ScenarioInput = {
   tempoIntervalos: Intervalo[];
   carencia: string[];
   periodos: { key: string; seq: number | null; origem: string | null; intervalos: Intervalo[]; source: SourceRef; editIds: number[] }[];
+  /** Planning premises of a simulation run; absent in an ordinary run (continuous contribution). */
+  premissas?: Premissas;
 } & Partial<RmiInput>; // absent in runs made before the RMI existed
+
+export type Premissas = { contribuicaoAte: string };
 
 export type Resultado = {
   ruleVersionId: number;
@@ -86,7 +90,10 @@ export function missingInputs(input: ScenarioInput): string[] {
 
 export function evaluate(input: ScenarioInput, versions: RuleVersion[], referencia: string): { resultados: Resultado[]; trail: Record<string, TrailNode> } {
   if (missingInputs(input).length) throw new Error(missingInputs(input).join(" "));
-  const ctx: RuleContext = { nascimento: input.nascimento!.value, sexo: input.sexo!, referencia, tempoIntervalos: input.tempoIntervalos, carencia: input.carencia };
+  const ctx: RuleContext = {
+    nascimento: input.nascimento!.value, sexo: input.sexo!, referencia, tempoIntervalos: input.tempoIntervalos, carencia: input.carencia,
+    ...(input.premissas ? { contribuicaoAte: input.premissas.contribuicaoAte } : {}),
+  };
   const resultados: Resultado[] = [];
   const trail: Record<string, TrailNode> = {};
   const rmiVersions: RuleVersion[] = [];
@@ -159,6 +166,7 @@ function ruleTrail(input: ScenarioInput, v: RuleVersion, requisitos: Requisito[]
     source: p.source,
     ...(p.editIds.length ? { editIds: p.editIds } : {}),
   }));
+  const premissa: TrailNode[] = input.premissas ? [{ label: "Premissa de planejamento", value: `contribuição só até ${input.premissas.contribuicaoAte}` }] : [];
   return {
     ...versionNode(v),
     children: requisitos.map((r) => ({
@@ -169,9 +177,9 @@ function ruleTrail(input: ScenarioInput, v: RuleVersion, requisitos: Requisito[]
         r.id === "idade"
           ? [{ label: "Data de nascimento", value: input.nascimento!.value, source: input.nascimento!.source }, { label: "Sexo", value: input.sexo!, ...(input.sexoEditIds.length ? { editIds: input.sexoEditIds } : {}) }]
           : r.id === "tempo" || r.id === "pontos" || r.id === "corte"
-            ? periodNodes
+            ? [...periodNodes, ...premissa]
             : r.id === "carencia"
-              ? [{ label: "Competências válidas", value: String(input.carencia.length) }]
+              ? [{ label: "Competências válidas", value: String(input.carencia.length) }, ...premissa]
               : [],
     })),
   };

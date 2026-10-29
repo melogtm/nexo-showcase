@@ -12,6 +12,11 @@ export type RuleContext = {
   referencia: string; // ISO date the run is "as of"
   tempoIntervalos: Intervalo[]; // counted contribution time (union), up to the reference date
   carencia: string[]; // YYYY-MM competências counted for carência
+  /**
+   * Planning premise: contributions after the reference date stop on this ISO date (inclusive).
+   * Absent = continuous contribution, the default projection. Absent gives exactly the old results (H2).
+   */
+  contribuicaoAte?: string;
 };
 
 export type Unidade = "dias" | "meses" | "idadeMeses" | "pontos";
@@ -37,7 +42,8 @@ export function tempoDias(ctx: RuleContext, data: string): number {
     const fim = Math.min(epochDay(i.fim), ate);
     if (fim >= ini) dias += fim - ini + 1;
   }
-  return dias + Math.max(0, epochDay(data) - epochDay(ctx.referencia));
+  const futuroAte = ctx.contribuicaoAte ? Math.min(epochDay(data), epochDay(ctx.contribuicaoAte)) : epochDay(data);
+  return dias + Math.max(0, futuroAte - epochDay(ctx.referencia));
 }
 
 /** Carência months at `data`: recorded competências up to the reference month, plus every month after it. */
@@ -46,7 +52,9 @@ export function carenciaMeses(ctx: RuleContext, data: string): number {
   const month = Temporal.PlainYearMonth.from(data.slice(0, 7));
   const upTo = Temporal.PlainYearMonth.compare(month, refMonth) < 0 ? month : refMonth;
   const recorded = ctx.carencia.filter((c) => Temporal.PlainYearMonth.compare(Temporal.PlainYearMonth.from(c), upTo) <= 0).length;
-  return recorded + Math.max(0, refMonth.until(month, { largestUnit: "months" }).months);
+  const stop = ctx.contribuicaoAte ? Temporal.PlainYearMonth.from(ctx.contribuicaoAte.slice(0, 7)) : month;
+  const futureUntil = Temporal.PlainYearMonth.compare(stop, month) < 0 ? stop : month;
+  return recorded + Math.max(0, refMonth.until(futureUntil, { largestUnit: "months" }).months);
 }
 
 /** Whole months of age at `data`. */

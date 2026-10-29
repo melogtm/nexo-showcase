@@ -45,6 +45,20 @@ describe("rule logic (fixture parameters)", () => {
     expect(m.dataProjetada).toBe("2030-01-01"); // 40th birthday; the missing time is reached earlier by continuous contribution
   });
 
+  test("planning premise: contributions that stop early can postpone or rule out eligibility; absent = continuous", () => {
+    const m = person("M", "2018-01-01", "2019-12-31");
+    expect(run1(m, FIXTURES.art19, "2020-06-30").dataProjetada).toBe("2030-01-01");
+    // Stops before the missing time is reached: never eligible within the horizon.
+    const short = run1({ ...m, premissas: { contribuicaoAte: "2020-12-31" } }, FIXTURES.art19, "2020-06-30");
+    expect(short.dataProjetada).toBeNull();
+    expect(short.requisitos.find((r) => r.id === "tempo")?.atual).toBe(730);
+    // Stops after enough time: the age still decides, same date as continuous contribution.
+    expect(run1({ ...m, premissas: { contribuicaoAte: "2021-12-31" } }, FIXTURES.art19, "2020-06-30").dataProjetada).toBe("2030-01-01");
+    // The premise shows up in the trail.
+    const trail = evaluate({ ...m, premissas: { contribuicaoAte: "2020-12-31" } }, [FIXTURES.art19], "2020-06-30").trail.EC103_ART19_PERMANENTE;
+    expect(JSON.stringify(trail)).toContain("contribuição só até 2020-12-31");
+  });
+
   test("art. 17 applies only if, on the cut-off date, less than the maximum was missing; the toll is half of it", () => {
     const close = run1(person("F", "2014-07-01", "2020-12-31"), FIXTURES.art17, "2021-01-01"); // 1,461 days at the fictional cut-off
     expect(close.aplicavel).toBe(true);
@@ -188,6 +202,13 @@ describe("calculation_run (database)", async () => {
       .values({ ...stored, id: undefined, createdAt: undefined, result: altered } as never)
       .returning({ id: schema.calculationRun.id });
     expect((await rerun(forged.id)).identical).toBe(false);
+
+    // A planning simulation is stored like any run and re-runs identically; a stop date in the past is refused.
+    const simId = await createRun(analysisId, "2026-09-27", { contribuicaoAte: "2027-12-31" });
+    expect((await rerun(simId)).identical).toBe(true);
+    const [sim] = await db.select().from(schema.calculationRun).where(sql`id = ${simId}`);
+    expect(sim.timelineSnapshot.premissas).toEqual({ contribuicaoAte: "2027-12-31" });
+    await expect(createRun(analysisId, "2026-09-27", { contribuicaoAte: "2026-01-01" })).rejects.toThrow(ScenarioError);
 
     // History cannot be rewritten.
     const cause = (p: Promise<unknown>) => p.then(() => "no error", (e: Error) => String((e.cause as Error | undefined)?.message ?? e.message));

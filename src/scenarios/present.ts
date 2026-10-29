@@ -1,3 +1,4 @@
+import { Temporal } from "temporal-polyfill";
 import { brDate, brDuracao, brMoney, brNumber } from "@/format";
 import type { Requisito } from "@/rules/core";
 import type { Rmi } from "@/rules/ec103-art26.v1";
@@ -43,6 +44,22 @@ export function rmiBasis(rmi: Rmi) {
 /** The rule reached first (today counts as earliest). Earliest is not "most advantageous": the benefit amount is not computed. */
 export function earliest(rs: Resultado[]): Resultado | undefined {
   return rs.filter((r) => r.aplicavel && r.dataProjetada).sort((a, b) => a.dataProjetada!.localeCompare(b.dataProjetada!))[0];
+}
+
+/** The rule with the highest estimated benefit among those reachable; ties go to the earlier date. */
+export function bestValue(rs: Resultado[]): Resultado | undefined {
+  return rs
+    .filter((r) => r.aplicavel && r.dataProjetada && r.rmi?.valorCentavos != null)
+    .sort((a, b) => b.rmi!.valorCentavos! - a.rmi!.valorCentavos! || a.dataProjetada!.localeCompare(b.dataProjetada!))[0];
+}
+
+/** How long from the reference date until a projected date, in words ("hoje", "em 2 anos e 3 meses"). */
+export function waitText(referencia: string, data: string | null): string {
+  if (!data) return "—";
+  if (data <= referencia) return "hoje";
+  const d = Temporal.PlainDate.from(referencia).until(Temporal.PlainDate.from(data), { largestUnit: "years" });
+  const parts = [d.years && `${d.years} ${d.years === 1 ? "ano" : "anos"}`, d.months && `${d.months} ${d.months === 1 ? "mês" : "meses"}`].filter(Boolean);
+  return parts.length ? `em ${parts.join(" e ")}` : `em ${d.days} ${d.days === 1 ? "dia" : "dias"}`;
 }
 
 const RANGES = /^\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}(, \d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2})*$/;

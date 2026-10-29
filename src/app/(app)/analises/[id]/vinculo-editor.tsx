@@ -11,7 +11,7 @@ export function VinculoEditor({ analysisId, periodo }: { analysisId: number; per
   return (
     <form action={action} className="editor">
       {state.error && <p className="error small" role="alert">{state.error}</p>}
-      {state.saved && <p className="small muted" role="status">Alteração registrada no histórico.</p>}
+      {state.saved && <p className="success small" role="status">✓ Alteração registrada no histórico.</p>}
       {!excluded && (
         <div className="editor-dates">
           <label>
@@ -30,13 +30,13 @@ export function VinculoEditor({ analysisId, periodo }: { analysisId: number; per
       </label>
       <div className="editor-actions">
         {excluded ? (
-          <button type="submit" name="intent" value="reabrir" className="button" disabled={pending}>Reabrir</button>
+          <button type="submit" name="intent" value="reabrir" className="button button-sm" disabled={pending}>Reabrir</button>
         ) : (
           <>
-            <button type="submit" name="intent" value="confirmar" className="button" disabled={pending}>Confirmar</button>
-            <button type="submit" name="intent" value="salvar" className="button button-quiet" disabled={pending}>Salvar datas</button>
-            <button type="submit" name="intent" value="excluir" className="button button-quiet" disabled={pending}>Excluir</button>
-            {periodo.confirmado && <button type="submit" name="intent" value="reabrir" className="button button-quiet" disabled={pending}>Desfazer confirmação</button>}
+            <button type="submit" name="intent" value="confirmar" className="button button-sm" disabled={pending}>Confirmar</button>
+            <button type="submit" name="intent" value="salvar" className="button button-secondary button-sm" disabled={pending}>Salvar datas</button>
+            <button type="submit" name="intent" value="excluir" className="button button-secondary button-sm" disabled={pending}>Excluir</button>
+            {periodo.confirmado && <button type="submit" name="intent" value="reabrir" className="button button-secondary button-sm" disabled={pending}>Desfazer confirmação</button>}
           </>
         )}
       </div>
