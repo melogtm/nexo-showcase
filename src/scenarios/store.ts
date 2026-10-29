@@ -1,10 +1,10 @@
-import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { canonicalJson } from "@/rules/core";
 import type { RmiInput } from "@/rules/ec103-art26.v1";
 import { getAnalysis } from "@/ingestion/ingest";
 import { loadReview } from "@/timeline/review";
-import { type RuleVersion, evaluate, missingInputs, scenarioInput } from "./evaluate";
+import { type Premissas, type RuleVersion, type ScenarioInput, evaluate, missingInputs, scenarioInput } from "./evaluate";
 
 export class ScenarioError extends Error {}
 
@@ -21,12 +21,14 @@ export async function activeRuleVersions(referencia: string): Promise<RuleVersio
   return [...latest.values()];
 }
 
-export async function createRun(analysisId: number, referencia: string): Promise<number> {
+/** A run with no premissas projects continuous contribution; with premissas it is a planning simulation (same storage, same re-run). */
+export async function createRun(analysisId: number, referencia: string, premissas?: Premissas): Promise<number> {
   const review = await loadReview(analysisId);
   if (!review?.timeline || !review.analysis.extraction) throw new ScenarioError("Análise sem linha do tempo.");
+  if (premissas && premissas.contribuicaoAte < referencia) throw new ScenarioError("A data em que as contribuições param deve ser hoje ou depois.");
   const sexoEditIds = review.edits.filter((e) => e.target === "filiado" && e.field === "sexo").map((e) => e.id);
   const base = scenarioInput(review.analysis.extraction, review.timeline, sexoEditIds);
-  const input = { ...base, ...(await inpcFor(base.salarios ?? [], referencia)) };
+  const input: ScenarioInput = { ...base, ...(premissas ? { premissas } : {}), ...(await inpcFor(base.salarios ?? [], referencia)) };
   const missing = missingInputs(input);
   if (missing.length) throw new ScenarioError(missing.join(" "));
 
@@ -74,7 +76,7 @@ export async function getRun(runId: number) {
 export async function listRuns(analysisId: number) {
   const r = schema.calculationRun;
   return (await getDb())
-    .select({ id: r.id, referenceDate: r.referenceDate, createdAt: r.createdAt })
+    .select({ id: r.id, referenceDate: r.referenceDate, createdAt: r.createdAt, premissas: sql<Premissas | null>`${r.timelineSnapshot}->'premissas'` })
     .from(r)
     .where(eq(r.analysisId, analysisId))
     .orderBy(desc(r.id));
@@ -109,4 +111,16 @@ export async function rerun(runId: number) {
     identical: canonicalJson(again.resultados) === canonicalJson(run.result) && canonicalJson(again.trail) === canonicalJson(run.trail),
     resultados: again.resultados,
   };
+}
+
+/** Each analysis' latest ordinary run (no premissas), with its result: what the client's situation is, not a what-if. */
+export async function latestBaseRuns() {
+  const r = schema.calculationRun;
+  const rows = await (await getDb())
+    .select({ id: r.id, analysisId: r.analysisId, referenceDate: r.referenceDate, createdAt: r.createdAt, result: r.result, premissas: sql<Premissas | null>`${r.timelineSnapshot}->'premissas'` })
+    .from(r)
+    .orderBy(desc(r.id));
+  const latest = new Map<number, (typeof rows)[number]>();
+  for (const row of rows) if (!row.premissas && !latest.has(row.analysisId)) latest.set(row.analysisId, row);
+  return latest;
 }

@@ -22,6 +22,12 @@ Nexo is a web app for Brazilian social-security (*previdenciário*) lawyers. Upl
 2. **The EC 103/2019 retirement scenarios side by side**: the four transition rules plus the permanent rule. Each shows eligibility today, the requirements that are met or missing, and a projected date.
 3. **A trail behind every number**: CNIS page and line, the rule applied, and the rule version.
 
+4. **A lawsuit board** (Jira-style columns: Novo, Em andamento, Em julgamento, Recurso, Concluído) fed by the Jusbrasil API. Cards move by themselves as court movements arrive, and you can drag them by hand; every move is logged with the movement or reason behind it.
+
+5. **Planning, alerts and a conferência checklist** (v1.2): simulate "what if the client stops contributing on a date" against continuous contribution; see on the dashboard which clients reach a rule within 24 months; and get, per analysis, what to check and which documents to ask the client for, with a printable list.
+
+Set `JUSBRASIL_API_TOKEN` to read real lawsuits; without it the board uses synthetic demo data. `CRON_SECRET` enables the daily sync (`vercel.json` crons).
+
 Lawyers do this by hand today, copying values between the PDF, a spreadsheet and a calculator. Nexo treats **extraction → calculation → justification** as one auditable chain.
 
 > Academic MVP (ACH2008, EACH/USP), not a production legal product. Nothing here is legal advice.
@@ -54,7 +60,15 @@ npm ci
 npm run dev        # http://localhost:3000 · login nexo / nexo
 ```
 
-Try it with the synthetic sample [`public/cnis-exemplo-sintetico.pdf`](public/cnis-exemplo-sintetico.pdf).
+Try it with the synthetic samples: [`public/cnis-exemplo-sintetico.pdf`](public/cnis-exemplo-sintetico.pdf) (a 51-year-old client with pending items) and [`public/cnis-exemplo-sintetico-2.pdf`](public/cnis-exemplo-sintetico-2.pdf) (a client close to retirement; regenerate with `npx tsx scripts/gen-cnis-exemplo-2.ts`).
+
+### Roteiro de demonstração (pt-BR, ~4 min)
+1. **Login** `nexo` / `nexo`. O Painel abre vazio.
+2. **Análises → Nova análise** com o exemplo 1 ("Maria"). Mostre os vínculos em *Precisam de atenção* e o card **Conferência e documentos**; abra **Lista de documentos para o cliente**.
+3. **Nova análise** com o exemplo 2 ("João"). Informe sexo **Masculino** e **Calcular cenários**: a idade mínima progressiva já é atingida.
+4. Na tela de cenários, **Planejamento**: contribuições param em 31/12/2026 → **Simular**. A tabela mostra o que *adia* e o que *deixa de atingir* em relação à contribuição contínua.
+5. **Painel**: o João aparece em **Alertas de aposentadoria** ("Já pode pedir").
+6. **Processos → Carregar 8 processos de exemplo**, arraste um card de coluna, abra um processo e mostre a movimentação que define a etapa.
 
 | Command | What it does |
 |---|---|

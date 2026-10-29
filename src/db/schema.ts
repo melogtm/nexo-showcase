@@ -1,6 +1,8 @@
 import { bigint, customType, date, index, integer, jsonb, numeric, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 import type { CnisExtraction } from "@/cnis/parse";
 import type { Resultado, RuleVersion, ScenarioInput, TrailNode } from "@/scenarios/evaluate";
+import { STAGE_IDS } from "@/processos/stages";
+import type { ProcessoSnapshot } from "@/processos/types";
 
 const bytea = customType<{ data: Uint8Array }>({ dataType: () => "bytea" });
 
@@ -71,6 +73,46 @@ export const calculationRun = pgTable("calculation_run", {
   trail: jsonb().$type<Record<string, TrailNode>>().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** A lawsuit on the board. `snapshot` is the provider's latest reading (Jusbrasil or demo), replaced at each sync. */
+export const processo = pgTable(
+  "processo",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    numeroCnj: text("numero_cnj").notNull().unique(),
+    clientLabel: text("client_label"),
+    analysisId: bigint("analysis_id", { mode: "number" }).references(() => analysis.id),
+    fonte: text({ enum: ["JUSBRASIL", "DEMO"] }).notNull(),
+    stage: text({ enum: STAGE_IDS }).notNull(),
+    /** AUTO: placed by the movements. MANUAL: the lawyer moved it; a newer court movement can move it again. */
+    stageOrigem: text("stage_origem", { enum: ["AUTO", "MANUAL"] }).notNull(),
+    stageMotivo: text("stage_motivo"),
+    stageAlteradoEm: timestamp("stage_alterado_em", { withTimezone: true }).notNull().defaultNow(),
+    ultimaMovimentacaoEm: date("ultima_movimentacao_em"),
+    sincronizadoEm: timestamp("sincronizado_em", { withTimezone: true }).notNull().defaultNow(),
+    snapshot: jsonb().$type<ProcessoSnapshot>().notNull(),
+  },
+  (t) => [index("processo_stage_idx").on(t.stage)],
+);
+
+/** Append-only history of a lawsuit on the board: imports, column changes (auto or manual) and syncs that brought news. */
+export const processoEvento = pgTable(
+  "processo_evento",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    processoId: bigint("processo_id", { mode: "number" }).notNull().references(() => processo.id),
+    at: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    tipo: text({ enum: ["IMPORTADO", "ETAPA", "SINCRONIZADO"] }).notNull(),
+    de: text({ enum: STAGE_IDS }),
+    para: text({ enum: STAGE_IDS }),
+    origem: text({ enum: ["AUTO", "MANUAL"] }).notNull(),
+    motivo: text(),
+    novasMovimentacoes: integer("novas_movimentacoes").notNull().default(0),
+    editedBy: text("edited_by"),
+  },
+  (t) => [index("processo_evento_processo_idx").on(t.processoId)],
+);
 
 /** INPC number index (IBGE SIDRA table 1736, dez/1993 = 100), used to correct salários for the RMI. Append-only: published months never change. */
 export const inpcIndice = pgTable("inpc_indice", {

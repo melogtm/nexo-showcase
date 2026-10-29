@@ -7,7 +7,8 @@ export function LoginForm() {
   const [state, action, pending] = useActionState(login, {});
   return (
     <form action={action} className="stack">
-      <h2 className="eyebrow">Acesso restrito</h2>
+      <h2 className="page-title">Entrar</h2>
+      <p className="muted">Acesso restrito ao escritório.</p>
       {state.error && <p className="error" role="alert">{state.error}</p>}
       <label>
         Usuário
@@ -17,7 +18,7 @@ export function LoginForm() {
         Senha
         <input name="password" type="password" autoComplete="current-password" required />
       </label>
-      <button type="submit" className="button" disabled={pending}>{pending ? "Entrando…" : "Entrar"}</button>
+      <button type="submit" className="button button-block" disabled={pending}>{pending ? "Entrando…" : "Entrar"}</button>
     </form>
   );
 }

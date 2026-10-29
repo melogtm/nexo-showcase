@@ -1,1 +1,1 @@
-{ "installCommand": "npm ci", "buildCommand": "npm run db:migrate && npm run build", "git": { "deploymentEnabled": { "**": false, "main": true } } }
+{ "installCommand": "npm ci", "buildCommand": "npm run db:migrate && npm run build", "git": { "deploymentEnabled": { "**": false, "main": true } }, "crons": [{ "path": "/api/cron/sincronizar-processos", "schedule": "17 9 * * *" }] }
