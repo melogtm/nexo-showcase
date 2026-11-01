@@ -20,3 +20,13 @@ jobs:
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npm test
+      - run: npm run build
+      - run: npm run doctor -- --blocking warning
+      # Renders every main page of the built app on a seeded PGlite (seed first: one process per PGlite dir).
+      - name: smoke
+        env: { NEXO_PASSWORD: ci }
+        run: |
+          npm run smoke -- --seed
+          npm start &
+          for i in $(seq 1 30); do curl -sf -o /dev/null http://localhost:3000/login && break; sleep 1; done
+          npm run smoke -- http://localhost:3000

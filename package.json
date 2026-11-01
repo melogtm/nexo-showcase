@@ -11,7 +11,8 @@
     "doctor": "react-doctor --no-telemetry -y",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "eval:h1": "NODE_ENV=test tsx scripts/eval-h1.ts"
+    "eval:h1": "NODE_ENV=test tsx scripts/eval-h1.ts",
+    "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.11",

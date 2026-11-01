@@ -76,6 +76,9 @@ Try it with the synthetic samples: [`public/cnis-exemplo-sintetico.pdf`](public/
 | `npm run lint && npx tsc --noEmit` | Lint and type-check |
 | `npm run eval:h1` | H1 extraction metric on the public sample |
 | `npm run db:generate` | New SQL migration after editing `src/db/schema.ts` |
+| `npm run smoke -- <url>` | Logs in and GETs every main page (read-only, safe on prod); `-- --seed` fills the local PGlite first. CI runs both |
+
+**After a prod deploy:** `NEXO_PASSWORD=<prod password> npm run smoke -- https://<domain>`. Then check by hand what needs a browser or writes data: drag a card and reload, *Voltar ao automático*, *Sincronizar*, upload a CNIS and *Calcular cenários*, *Reexecutar e comparar*.
 
 ## Stack
 
