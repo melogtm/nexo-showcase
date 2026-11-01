@@ -44,7 +44,7 @@ export function PageHeader({ crumbs = [], title, sub, actions }: { crumbs?: Crum
         {crumbs.length > 0 && (
           <nav aria-label="Você está em" className="crumbs">
             {crumbs.map((c, i) => (
-              <span key={`${c.label}-${i}`} className="row" style={{ gap: 6 }}>
+              <span key={c.href ?? c.label} className="row" style={{ gap: 6 }}>
                 {i > 0 && <Icon name="chevron" size={12} />}
                 {c.href ? <Link href={c.href}>{c.label}</Link> : <span>{c.label}</span>}
               </span>
@@ -59,14 +59,7 @@ export function PageHeader({ crumbs = [], title, sub, actions }: { crumbs?: Crum
   );
 }
 
-export type Tone = "ok" | "warn" | "danger" | "info" | "purple" | "neutral";
+export type Tone = "ok" | "warn" | "danger" | "info" | "neutral";
 export function Badge({ tone = "neutral", children, title }: { tone?: Tone; children: ReactNode; title?: string }) {
   return <span className={`badge tone-${tone}`} title={title}>{children}</span>;
-}
-
-const relative = new Intl.RelativeTimeFormat("pt-BR", { numeric: "auto" });
-/** "há 3 dias", from an ISO date compared with another ISO date (both São Paulo calendar days). */
-export function daysAgo(iso: string, today: string) {
-  const d = Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${iso}T00:00:00Z`)) / 86_400_000);
-  return relative.format(-d, "day");
 }

@@ -14,7 +14,8 @@ export const STAGES = [
 export type Stage = (typeof STAGES)[number]["id"];
 export const STAGE_IDS = STAGES.map((s) => s.id) as [Stage, ...Stage[]];
 export const isStage = (s: string): s is Stage => (STAGE_IDS as string[]).includes(s);
-export const stageLabel = (s: Stage) => STAGES.find((x) => x.id === s)!.label;
+const LABEL = Object.fromEntries(STAGES.map((s) => [s.id, s.label])) as Record<Stage, string>;
+export const stageLabel = (s: Stage) => LABEL[s];
 
 /** Checked per movement, newest movement first; within one movement the first matching rule wins. */
 const RULES: { stage: Stage; pattern: RegExp }[] = [
@@ -29,9 +30,10 @@ const RULES: { stage: Stage; pattern: RegExp }[] = [
   { stage: "NOVO", pattern: /distribu[íi]d|autuad|peti[çc][ãa]o inicial/i },
 ];
 
-export type Classificacao = { stage: Stage; motivo: string; movimento: Movimento | null };
-
+// Local copy on purpose: importing @/format here would ship temporal-polyfill in the board's client bundle.
 const brDate = (iso: string) => iso.split("-").reverse().join("/");
+
+export type Classificacao = { stage: Stage; motivo: string; movimento: Movimento | null };
 
 /** The column a lawsuit belongs in, with the movement that decided it (shown on the card: nothing moves silently). */
 export function classify(s: Pick<ProcessoSnapshot, "arquivado" | "extinto" | "movimentos">): Classificacao {

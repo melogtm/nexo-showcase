@@ -8,7 +8,7 @@ import { contentHash } from "@/rules/core";
 import { RMI_RULES, RULES, ruleKey } from "@/rules/registry";
 import { recordEdits } from "@/timeline/review";
 import { type RuleVersion, type ScenarioInput, evaluate } from "./evaluate";
-import { ScenarioError, activeRuleVersions, createRun, rerun } from "./store";
+import { ScenarioError, activeRuleVersions, createRun, latestBaseRuns, rerun } from "./store";
 
 // Fixture parameters are deliberately NOT the legal ones (ages, times, cut-off date, even days per year): the rules' logic is tested on its own,
 // and the seeded legal parameters are only read from the database.
@@ -208,6 +208,8 @@ describe("calculation_run (database)", async () => {
     expect((await rerun(simId)).identical).toBe(true);
     const [sim] = await db.select().from(schema.calculationRun).where(sql`id = ${simId}`);
     expect(sim.timelineSnapshot.premissas).toEqual({ contribuicaoAte: "2027-12-31" });
+    // The dashboard reads the client's situation from ordinary runs only: the newer simulation is skipped.
+    expect((await latestBaseRuns()).get(analysisId)?.id).toBe(forged.id);
     await expect(createRun(analysisId, "2026-09-27", { contribuicaoAte: "2026-01-01" })).rejects.toThrow(ScenarioError);
 
     // History cannot be rewritten.

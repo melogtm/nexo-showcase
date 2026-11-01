@@ -161,10 +161,6 @@ code, .mono { font: 0.85em ui-monospace, SFMono-Regular, Menlo, monospace; }
 .button-ghost:hover { background: var(--neutral-bg); }
 .button-sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
 .button-block { width: 100%; }
-.link-button { font: inherit; color: var(--muted); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
-.link-button:hover { color: var(--ink); }
-.icon-button { display: inline-grid; place-items: center; width: 30px; height: 30px; color: var(--muted); background: transparent; border: 0; border-radius: var(--radius-sm); cursor: pointer; }
-.icon-button:hover { background: var(--neutral-bg); color: var(--ink); }
 svg.icon { flex: none; }
 
 /* ───────── Forms ───────── */
@@ -198,7 +194,6 @@ input[type="search"] { padding-left: 32px; }
 .card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .card-title { font-size: 14px; font-weight: 650; display: flex; align-items: center; gap: 8px; }
 .card-body { padding: 16px 18px; display: grid; gap: 12px; }
-.card-body.flush { padding: 0; }
 .card-footer { padding: 12px 18px; border-top: 1px solid var(--line); background: var(--surface-2); border-radius: 0 0 var(--radius) var(--radius); }
 .card.accent { border-top: 3px solid var(--red); }
 .scroll-x { overflow-x: auto; }
@@ -230,7 +225,6 @@ a.tile:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
 .tone-warn { color: var(--warn); background: var(--warn-bg); }
 .tone-danger { color: var(--danger); background: var(--danger-bg); }
 .tone-info { color: var(--info); background: var(--info-bg); }
-.tone-purple { color: var(--purple); background: var(--purple-bg); }
 .tone-neutral { color: var(--neutral); background: var(--neutral-bg); }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
 

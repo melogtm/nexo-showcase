@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { type DragEvent, useActionState, useMemo, useOptimistic, useState, useTransition } from "react";
-import { STAGES, type Stage } from "@/processos/stages";
+import { STAGES, type Stage, stageLabel } from "@/processos/stages";
 import { Icon } from "../ui";
 import { mover, sincronizarTodos } from "./actions";
 
@@ -56,7 +56,7 @@ export function Board({ cards, initialFilter, lastSync }: { cards: CardData[]; i
       await mover(id, stage);
       setPendingId(null);
     });
-    setAnnounce(`Processo ${card.numeroCnj} movido para ${STAGES.find((s) => s.id === stage)!.label}.`);
+    setAnnounce(`Processo ${card.numeroCnj} movido para ${stageLabel(stage)}.`);
   };
 
   const onDrop = (e: DragEvent, stage: Stage) => {
@@ -94,14 +94,13 @@ export function Board({ cards, initialFilter, lastSync }: { cards: CardData[]; i
 
       <p className="sr-only" aria-live="polite">{announce}</p>
 
-      <div className="board" role="list" aria-label="Quadro de processos por etapa">
+      <div className="board">
         {STAGES.map((s) => {
           const inCol = visible.filter((c) => c.stage === s.id);
           return (
             <section
               key={s.id}
               id={`col-${s.id}`}
-              role="listitem"
               aria-labelledby={`col-${s.id}-title`}
               className={`column${overStage === s.id ? " is-over" : ""}`}
               onDragOver={(e) => {

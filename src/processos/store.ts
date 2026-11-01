@@ -14,7 +14,8 @@ const p = schema.processo;
 const ev = schema.processoEvento;
 
 /** São Paulo calendar date of an audit timestamp, to compare with court movement dates. */
-const spDate = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(d);
+const spDay = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" });
+const spDate = (d: Date) => spDay.format(d);
 
 export type ImportInput = { numero: string; clientLabel?: string | null; analysisId?: number | null };
 
@@ -28,22 +29,24 @@ export async function importProcesso(input: ImportInput, provider: ProcessoProvi
   const snapshot = await provider.fetch(numeroCnj);
   const auto = classify(snapshot);
   const clientLabel = input.clientLabel?.trim().slice(0, 200) || null;
-  const [row] = await db
-    .insert(p)
-    .values({
-      numeroCnj,
-      clientLabel,
-      analysisId: input.analysisId ?? null,
-      fonte: snapshot.fonte,
-      stage: auto.stage,
-      stageOrigem: "AUTO",
-      stageMotivo: auto.motivo,
-      ultimaMovimentacaoEm: snapshot.movimentos[0]?.data ?? null,
-      snapshot,
-    })
-    .returning({ id: p.id });
-  await db.insert(ev).values({ processoId: row.id, tipo: "IMPORTADO", para: auto.stage, origem: "AUTO", motivo: auto.motivo, novasMovimentacoes: snapshot.movimentos.length });
-  return row.id;
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(p)
+      .values({
+        numeroCnj,
+        clientLabel,
+        analysisId: input.analysisId ?? null,
+        fonte: snapshot.fonte,
+        stage: auto.stage,
+        stageOrigem: "AUTO",
+        stageMotivo: auto.motivo,
+        ultimaMovimentacaoEm: snapshot.movimentos[0]?.data ?? null,
+        snapshot,
+      })
+      .returning({ id: p.id });
+    await tx.insert(ev).values({ processoId: row.id, tipo: "IMPORTADO", para: auto.stage, origem: "AUTO", motivo: auto.motivo, novasMovimentacoes: snapshot.movimentos.length });
+    return row.id;
+  });
 }
 
 export type SyncResult = { id: number; changed: boolean; novas: number; stage: Stage };
@@ -65,26 +68,29 @@ async function applySnapshot(current: Processo, snapshot: ProcessoSnapshot): Pro
   const novas = snapshot.movimentos.filter((m) => !known.has(`${m.data}|${m.titulo}`)).length;
   const now = new Date();
 
-  await db
-    .update(p)
-    .set({
-      snapshot,
-      fonte: snapshot.fonte,
-      sincronizadoEm: now,
-      ultimaMovimentacaoEm: snapshot.movimentos[0]?.data ?? null,
-      ...(decision.changed || decision.origem !== current.stageOrigem
-        ? { stage: decision.stage, stageOrigem: decision.origem, stageMotivo: auto.motivo, stageAlteradoEm: now }
-        : decision.origem === "AUTO"
-          ? { stageMotivo: auto.motivo }
-          : {}),
-    })
-    .where(eq(p.id, current.id));
+  // One transaction: a card never changes column without its history row.
+  await db.transaction(async (tx) => {
+    await tx
+      .update(p)
+      .set({
+        snapshot,
+        fonte: snapshot.fonte,
+        sincronizadoEm: now,
+        ultimaMovimentacaoEm: snapshot.movimentos[0]?.data ?? null,
+        ...(decision.changed || decision.origem !== current.stageOrigem
+          ? { stage: decision.stage, stageOrigem: decision.origem, stageMotivo: auto.motivo, stageAlteradoEm: now }
+          : decision.origem === "AUTO"
+            ? { stageMotivo: auto.motivo }
+            : {}),
+      })
+      .where(eq(p.id, current.id));
 
-  if (decision.changed) {
-    await db.insert(ev).values({ processoId: current.id, tipo: "ETAPA", de: current.stage, para: decision.stage, origem: "AUTO", motivo: auto.motivo, novasMovimentacoes: novas });
-  } else if (novas > 0) {
-    await db.insert(ev).values({ processoId: current.id, tipo: "SINCRONIZADO", origem: "AUTO", motivo: `${novas} nova(s) movimentação(ões).`, novasMovimentacoes: novas });
-  }
+    if (decision.changed) {
+      await tx.insert(ev).values({ processoId: current.id, tipo: "ETAPA", de: current.stage, para: decision.stage, origem: "AUTO", motivo: auto.motivo, novasMovimentacoes: novas });
+    } else if (novas > 0) {
+      await tx.insert(ev).values({ processoId: current.id, tipo: "SINCRONIZADO", origem: "AUTO", motivo: `${novas} nova(s) movimentação(ões).`, novasMovimentacoes: novas });
+    }
+  });
   return { id: current.id, changed: decision.changed, novas, stage: decision.stage };
 }
 
@@ -94,6 +100,7 @@ export async function syncAll(provider: ProcessoProvider = getProvider()): Promi
   const db = await getDb();
   const all = await db.select().from(p).orderBy(asc(p.id));
   const out: SyncAllResult = { total: all.length, mudaram: 0, novas: 0, erros: [] };
+  // Sequential on purpose: the paid Jusbrasil API rate-limits (429), so one request at a time.
   for (const current of all) {
     try {
       const r = await applySnapshot(current, await provider.fetch(current.numeroCnj));
@@ -114,8 +121,10 @@ export async function moveProcesso(id: number, stage: Stage, editedBy: string, m
   if (!current) throw new ProcessoError("Processo não encontrado.");
   if (current.stage === stage) return;
   const texto = motivo?.trim().slice(0, 500) || `Movido manualmente para ${stageLabel(stage)}.`;
-  await db.update(p).set({ stage, stageOrigem: "MANUAL", stageMotivo: texto, stageAlteradoEm: new Date() }).where(eq(p.id, id));
-  await db.insert(ev).values({ processoId: id, tipo: "ETAPA", de: current.stage, para: stage, origem: "MANUAL", motivo: texto, editedBy });
+  await db.transaction(async (tx) => {
+    await tx.update(p).set({ stage, stageOrigem: "MANUAL", stageMotivo: texto, stageAlteradoEm: new Date() }).where(eq(p.id, id));
+    await tx.insert(ev).values({ processoId: id, tipo: "ETAPA", de: current.stage, para: stage, origem: "MANUAL", motivo: texto, editedBy });
+  });
 }
 
 /** Hand the card back to the movements: it goes wherever the court data places it. */
@@ -124,8 +133,10 @@ export async function resumeAuto(id: number) {
   const [current] = await db.select().from(p).where(eq(p.id, id));
   if (!current) throw new ProcessoError("Processo não encontrado.");
   const auto = classify(current.snapshot);
-  await db.update(p).set({ stage: auto.stage, stageOrigem: "AUTO", stageMotivo: auto.motivo, stageAlteradoEm: new Date() }).where(eq(p.id, id));
-  if (auto.stage !== current.stage) await db.insert(ev).values({ processoId: id, tipo: "ETAPA", de: current.stage, para: auto.stage, origem: "AUTO", motivo: auto.motivo });
+  await db.transaction(async (tx) => {
+    await tx.update(p).set({ stage: auto.stage, stageOrigem: "AUTO", stageMotivo: auto.motivo, stageAlteradoEm: new Date() }).where(eq(p.id, id));
+    if (auto.stage !== current.stage) await tx.insert(ev).values({ processoId: id, tipo: "ETAPA", de: current.stage, para: auto.stage, origem: "AUTO", motivo: auto.motivo });
+  });
 }
 
 export async function linkAnalysis(id: number, analysisId: number | null, clientLabel: string | null) {
@@ -150,9 +161,8 @@ export async function processosOfAnalysis(analysisId: number) {
   return (await getDb()).select().from(p).where(eq(p.analysisId, analysisId)).orderBy(desc(p.id));
 }
 
-/** The newest movements across the board, for the dashboard feed. */
-export async function recentMovimentos(limit: number) {
-  const rows = await listProcessos();
+/** The newest movements across the board, for the dashboard feed. Pure: takes the rows the page already loaded. */
+export function recentMovimentos(rows: Processo[], limit: number) {
   return rows
     .flatMap((r) => r.snapshot.movimentos.slice(0, 3).map((m) => ({ processoId: r.id, numeroCnj: r.numeroCnj, clientLabel: r.clientLabel, ...m })))
     .sort((a, b) => b.data.localeCompare(a.data))

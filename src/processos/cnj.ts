@@ -9,13 +9,10 @@ export function parseCnj(input: string): string | null {
   return `${n}-${dd}.${aaaa}.${j}.${tr}.${o}`;
 }
 
-/** The two check digits for the other 18 (used by the demo generator). */
-export function cnjCheckDigits(n: string, aaaa: string, j: string, tr: string, o: string): string {
-  return String(98n - (BigInt(`${n}${aaaa}${j}${tr}${o}00`) % 97n)).padStart(2, "0");
-}
-
+/** A valid CNJ number from its other 18 digits, computing the check (used by the demo generator). */
 export function buildCnj(n: string, aaaa: string, j: string, tr: string, o: string): string {
-  return `${n}-${cnjCheckDigits(n, aaaa, j, tr, o)}.${aaaa}.${j}.${tr}.${o}`;
+  const dd = String(98n - (BigInt(`${n}${aaaa}${j}${tr}${o}00`) % 97n)).padStart(2, "0");
+  return `${n}-${dd}.${aaaa}.${j}.${tr}.${o}`;
 }
 
 const UF_BY_TR = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SE", "SP", "TO"];

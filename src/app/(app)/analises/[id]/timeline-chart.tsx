@@ -1,14 +1,8 @@
 import { Temporal } from "temporal-polyfill";
-import { brDate } from "@/format";
+import { STATUS, brDate } from "@/format";
 import { epochDay } from "@/rules/core";
-import { type Intervalo, type Status, type Timeline, union } from "@/timeline/timeline";
+import { type Intervalo, type Timeline, union } from "@/timeline/timeline";
 
-export const STATUS: Record<Status, { label: string; icon: string }> = {
-  OK: { label: "OK", icon: "✓" },
-  PENDENTE: { label: "Pendente", icon: "⏸" },
-  REVISAR: { label: "Revisar", icon: "⚠" },
-  EXCLUIDO: { label: "Excluído", icon: "✕" },
-};
 const W = 1000;
 const LABEL_W = 210;
 const ROW = 26;

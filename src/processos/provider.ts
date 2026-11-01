@@ -1,9 +1,7 @@
-import { Temporal } from "temporal-polyfill";
+import { today } from "@/format";
 import { demoProvider } from "./demo";
 import { jusbrasilProvider } from "./jusbrasil";
 import type { ProcessoProvider } from "./types";
-
-export const today = () => Temporal.Now.plainDateISO("America/Sao_Paulo").toString();
 
 /** The real Jusbrasil API when JUSBRASIL_API_TOKEN is set; synthetic demo lawsuits otherwise. */
 export function getProvider(): ProcessoProvider {
