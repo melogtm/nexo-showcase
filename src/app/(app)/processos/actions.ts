@@ -37,13 +37,13 @@ export async function importar(_prev: ImportState, form: FormData): Promise<Impo
 export async function carregarExemplos() {
   await requireSession();
   if (getProvider().fonte !== "DEMO") return;
-  for (const [i, numero] of demoNumbers(8).entries()) {
-    try {
-      await importProcesso({ numero, clientLabel: `Cliente exemplo ${String(i + 1).padStart(2, "0")}` });
-    } catch (e) {
-      if (!(e instanceof ProcessoError)) throw e; // already on the board: skip
-    }
-  }
+  await Promise.all(
+    demoNumbers(8).map((numero, i) =>
+      importProcesso({ numero, clientLabel: `Cliente exemplo ${String(i + 1).padStart(2, "0")}` }).catch((e) => {
+        if (!(e instanceof ProcessoError)) throw e; // already on the board: skip
+      }),
+    ),
+  );
   refresh();
 }
 

@@ -117,10 +117,11 @@ export async function rerun(runId: number) {
 export async function latestBaseRuns() {
   const r = schema.calculationRun;
   const rows = await (await getDb())
-    .select({ id: r.id, analysisId: r.analysisId, referenceDate: r.referenceDate, createdAt: r.createdAt, result: r.result, premissas: sql<Premissas | null>`${r.timelineSnapshot}->'premissas'` })
+    .select({ id: r.id, analysisId: r.analysisId, referenceDate: r.referenceDate, createdAt: r.createdAt, result: r.result })
     .from(r)
+    .where(sql`coalesce(${r.timelineSnapshot}->'premissas', 'null'::jsonb) = 'null'::jsonb`) // key absent or JSON null: an ordinary run
     .orderBy(desc(r.id));
   const latest = new Map<number, (typeof rows)[number]>();
-  for (const row of rows) if (!row.premissas && !latest.has(row.analysisId)) latest.set(row.analysisId, row);
+  for (const row of rows) if (!latest.has(row.analysisId)) latest.set(row.analysisId, row);
   return latest;
 }

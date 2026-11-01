@@ -1,4 +1,4 @@
-import { brDate } from "@/format";
+import { brDate, brDateTime } from "@/format";
 import type { Resultado, RuleVersion, ScenarioInput, TrailNode } from "./evaluate";
 import type { loadRunView } from "./store";
 import { earliest, humanize, inDisplayOrder, paramValue, requirementText, RMI_RESSALVA, rmiBasis, rmiValue, verdict } from "./present";
@@ -38,7 +38,6 @@ export function reportData({ run, analysis, versions }: NonNullable<Awaited<Retu
 
 export const esc = (s: unknown) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
-const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
 
 export function renderReport(d: ReportData): string {
   const first = earliest(d.resultados);
@@ -100,7 +99,7 @@ export function renderReport(d: ReportData): string {
 <p class="muted">✱ NEXO · Relatório de cenários</p>
 <h1>${esc(d.clientLabel)}</h1>
 <p>${esc(d.filiado.nome ?? "—")} · NIT ${esc(d.filiado.nit ?? "—")} · nascimento ${esc(d.input.nascimento ? brDate(d.input.nascimento.value) : "—")} · sexo ${d.input.sexo === "F" ? "feminino" : d.input.sexo === "M" ? "masculino" : "—"}</p>
-<p class="muted">Cálculo nº ${d.runId} · referência ${esc(brDate(d.referenceDate))} · gerado em ${esc(dateTime.format(d.createdAt))}</p>${d.input.premissas ? `\n<p><strong>Simulação de planejamento:</strong> contribuições só até ${esc(brDate(d.input.premissas.contribuicaoAte))}; depois disso, tempo e carência param de crescer.</p>` : ""}
+<p class="muted">Cálculo nº ${d.runId} · referência ${esc(brDate(d.referenceDate))} · gerado em ${esc(brDateTime(d.createdAt))}</p>${d.input.premissas ? `\n<p><strong>Simulação de planejamento:</strong> contribuições só até ${esc(brDate(d.input.premissas.contribuicaoAte))}; depois disso, tempo e carência param de crescer.</p>` : ""}
 ${first ? `<p class="highlight">Regra atingida mais cedo: <strong>${esc(first.nome)}</strong> (${esc(verdict(first).text.toLowerCase())}). Mais cedo não significa mais vantajoso${d.rmiTrail ? ": compare também o valor estimado de cada regra" : ": este cálculo não estimou o valor do benefício"}.</p>` : ""}
 <h2>Cenários</h2>
 ${rules}

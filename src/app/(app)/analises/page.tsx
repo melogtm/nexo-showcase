@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { brDate, brDuracao } from "@/format";
+import { brDate, brDuracao, brDateTime } from "@/format";
 import { type AnalysisOverview, analysesOverview } from "@/scenarios/progress";
 import { Badge, Icon, PageHeader } from "../ui";
 import { UploadForm } from "../upload-form";
 
 export const metadata = { title: "Análises · Nexo" };
 
-const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
 
 const FILTERS: { id: string; label: string; match: (a: AnalysisOverview) => boolean }[] = [
   { id: "todas", label: "Todas", match: () => true },
@@ -18,8 +17,7 @@ const FILTERS: { id: string; label: string; match: (a: AnalysisOverview) => bool
 
 export default async function AnalysesPage({ searchParams }: { searchParams: Promise<{ filtro?: string; q?: string }> }) {
   await connection();
-  const { filtro = "todas", q = "" } = await searchParams;
-  const all = await analysesOverview();
+  const [{ filtro = "todas", q = "" }, all] = await Promise.all([searchParams, analysesOverview()]);
   const filter = FILTERS.find((f) => f.id === filtro) ?? FILTERS[0];
   const term = q.trim().toLowerCase();
   const rows = all.filter((a) => filter.match(a) && (!term || a.clientLabel.toLowerCase().includes(term)));
@@ -63,7 +61,7 @@ export default async function AnalysesPage({ searchParams }: { searchParams: Pro
                       <tr key={a.id}>
                         <td>
                           <Link className="row-link" href={`/analises/${a.id}`}>{a.clientLabel}</Link>
-                          <div className="muted small">criada em {dateTime.format(a.createdAt)}</div>
+                          <div className="muted small">criada em {brDateTime(a.createdAt)}</div>
                         </td>
                         <td><Badge tone={a.next.tone}>{a.next.label}</Badge></td>
                         <td className="num">{a.vinculos ?? "—"}{a.atencao > 0 && <span className="muted"> ({a.atencao} ⚠)</span>}</td>
@@ -74,7 +72,7 @@ export default async function AnalysesPage({ searchParams }: { searchParams: Pro
                         </td>
                         <td className="nowrap">
                           {a.ultimoCalculo ? <Link href={`/analises/${a.id}/cenarios/${a.ultimoCalculo.id}`}>nº {a.ultimoCalculo.id}</Link> : <span className="muted">—</span>}
-                          {a.ultimoCalculo && <div className="muted small">{dateTime.format(a.ultimoCalculo.em)}</div>}
+                          {a.ultimoCalculo && <div className="muted small">{brDateTime(a.ultimoCalculo.em)}</div>}
                         </td>
                         <td className="num">{a.processos || <span className="muted">—</span>}</td>
                       </tr>

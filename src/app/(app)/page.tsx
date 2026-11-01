@@ -1,23 +1,22 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { brDate } from "@/format";
-import { today } from "@/processos/provider";
+import { Temporal } from "temporal-polyfill";
+import { brDate, brDateTime, daysAgo, today } from "@/format";
 import { STAGES } from "@/processos/stages";
 import { listProcessos, recentMovimentos } from "@/processos/store";
 import { retirementAlerts } from "@/scenarios/alerts";
 import { analysesOverview } from "@/scenarios/progress";
 import { waitText } from "@/scenarios/present";
-import { Badge, Icon, PageHeader, daysAgo } from "./ui";
+import { Badge, Icon, PageHeader } from "./ui";
 
-const longDate = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Sao_Paulo" });
-const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export default async function Dashboard() {
   await connection();
-  const [analyses, processos, feed] = await Promise.all([analysesOverview(), listProcessos(), recentMovimentos(8)]);
-  const hoje = today();
-  const semana = new Date(Date.parse(`${hoje}T00:00:00Z`) - 7 * 86_400_000).toISOString().slice(0, 10);
+  const [analyses, processos] = await Promise.all([analysesOverview(), listProcessos()]);
+  const feed = recentMovimentos(processos, 8);
+  const hoje = Temporal.PlainDate.from(today());
+  const semana = hoje.subtract({ days: 7 }).toString();
   const paraRevisar = analyses.filter((a) => a.next.step === "REVISAR" || a.next.step === "DADOS");
   const paraCalcular = analyses.filter((a) => a.next.step === "CALCULAR" || a.next.step === "RECALCULAR");
   const ativos = processos.filter((p) => p.stage !== "CONCLUIDO");
@@ -27,7 +26,7 @@ export default async function Dashboard() {
   const HORIZONTE_MESES = 24;
   const alertas = retirementAlerts(
     analyses.flatMap((a) => (a.baseRun ? [{ analysisId: a.id, clientLabel: a.clientLabel, runId: a.baseRun.id, referenceDate: a.baseRun.referenceDate, result: a.baseRun.result }] : [])),
-    hoje,
+    hoje.toString(),
     HORIZONTE_MESES,
   );
 
@@ -35,7 +34,7 @@ export default async function Dashboard() {
     <>
       <PageHeader
         title="Painel"
-        sub={capitalize(longDate.format(new Date()))}
+        sub={capitalize(hoje.toLocaleString("pt-BR", { weekday: "long", day: "numeric", month: "long" }))}
         actions={
           <>
             <Link href="/processos#importar" className="button button-secondary"><Icon name="plus" /> Importar processo</Link>
@@ -92,7 +91,7 @@ export default async function Dashboard() {
                       <td><Link className="row-link" href={`/analises/${x.analysisId}`}>{x.clientLabel}</Link></td>
                       <td>{x.ruleName}</td>
                       <td className="tabular nowrap">{brDate(x.data)}</td>
-                      <td>{x.kind === "JA" ? <Badge tone="ok">Já pode pedir</Badge> : <Badge tone={x.meses <= 6 ? "warn" : "info"}>{waitText(hoje, x.data)}</Badge>}</td>
+                      <td>{x.kind === "JA" ? <Badge tone="ok">Já pode pedir</Badge> : <Badge tone={x.meses <= 6 ? "warn" : "info"}>{waitText(hoje.toString(), x.data)}</Badge>}</td>
                       <td className="nowrap"><Link href={`/analises/${x.analysisId}/cenarios/${x.runId}`} className="button button-ghost button-sm">Ver cenários</Link></td>
                     </tr>
                   ))}
@@ -123,7 +122,7 @@ export default async function Dashboard() {
                       <tr key={a.id}>
                         <td><Link className="row-link" href={a.next.step === "REVISAR" ? `/analises/${a.id}?ver=atencao` : `/analises/${a.id}`}>{a.clientLabel}</Link></td>
                         <td><Badge tone={a.next.tone}>{a.next.label}</Badge></td>
-                        <td className="muted nowrap">{dateTime.format(a.atualizadaEm)}</td>
+                        <td className="muted nowrap">{brDateTime(a.atualizadaEm)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -147,7 +146,7 @@ export default async function Dashboard() {
               <ul className="feed">
                 {feed.map((m) => (
                   <li key={`${m.processoId}-${m.data}-${m.titulo}`}>
-                    <span className="when" title={brDate(m.data)}>{daysAgo(m.data, hoje)}</span>
+                    <span className="when" title={brDate(m.data)}>{daysAgo(m.data, hoje.toString())}</span>
                     <span className="what">
                       <Link href={`/processos/${m.processoId}`}>{m.titulo}</Link>
                       <span className="muted small"><span className="mono">{m.numeroCnj}</span>{m.clientLabel ? ` · ${m.clientLabel}` : ""}</span>

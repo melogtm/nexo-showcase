@@ -1,21 +1,22 @@
 import { connection } from "next/server";
+import { Temporal } from "temporal-polyfill";
+import { brDate, brDateTime, daysAgo, today } from "@/format";
 import { listAnalyses } from "@/ingestion/ingest";
-import { getProvider, today } from "@/processos/provider";
+import { getProvider } from "@/processos/provider";
 import { listProcessos } from "@/processos/store";
-import { PageHeader, daysAgo } from "../ui";
+import { PageHeader } from "../ui";
 import { carregarExemplos } from "./actions";
 import { Board, type CardData } from "./board";
 import { ImportForm } from "./import-form";
 
 export const metadata = { title: "Processos · Nexo" };
 
-const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
 
 export default async function ProcessosPage({ searchParams }: { searchParams: Promise<{ filtro?: string }> }) {
   await connection();
   const [{ filtro = "" }, processos, analyses] = await Promise.all([searchParams, listProcessos(), listAnalyses()]);
   const hoje = today();
-  const semana = new Date(Date.parse(`${hoje}T00:00:00Z`) - 7 * 86_400_000).toISOString().slice(0, 10);
+  const semana = Temporal.PlainDate.from(hoje).subtract({ days: 7 }).toString();
   const label = new Map(analyses.map((a) => [a.id, a.clientLabel]));
   const demo = getProvider().fonte === "DEMO";
 
@@ -32,11 +33,11 @@ export default async function ProcessosPage({ searchParams }: { searchParams: Pr
       clientLabel: p.clientLabel ?? (p.analysisId ? label.get(p.analysisId) ?? null : null),
       analysisId: p.analysisId,
       local: [s.tribunal, s.orgao].filter(Boolean).join(" · ") || "Tribunal não informado",
-      ultima: last ? { data: last.data.split("-").reverse().join("/"), titulo: last.titulo, quando: daysAgo(last.data, hoje) } : null,
+      ultima: last ? { data: brDate(last.data), titulo: last.titulo, quando: daysAgo(last.data, hoje) } : null,
       recente: !!p.ultimaMovimentacaoEm && p.ultimaMovimentacaoEm >= semana,
     };
   });
-  const lastSync = processos.length ? dateTime.format(new Date(Math.max(...processos.map((p) => p.sincronizadoEm.getTime())))) : null;
+  const lastSync = processos.length ? brDateTime(new Date(Math.max(...processos.map((p) => p.sincronizadoEm.getTime())))) : null;
 
   return (
     <>

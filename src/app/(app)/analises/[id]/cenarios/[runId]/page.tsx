@@ -1,17 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { brDate } from "@/format";
+import { brDate, brDateTime, today } from "@/format";
 import type { Resultado, RuleVersion, TrailNode } from "@/scenarios/evaluate";
 import { bestValue, earliest, humanize, inDisplayOrder, paramValue, requirementText, RMI_RESSALVA, rmiBasis, rmiValue, verdict, waitText } from "@/scenarios/present";
 import { latestBaseRuns, loadRunView } from "@/scenarios/store";
-import { today } from "@/processos/provider";
 import { listEdits } from "@/timeline/review";
 import { Badge, Icon, PageHeader, type Tone } from "../../../../ui";
 import { CalcularButton, ReexecutarButton } from "../buttons";
 import { SimularForm } from "../simular-form";
 
-const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
 const VERDICT_TONE: Record<ReturnType<typeof verdict>["kind"], Tone> = { yes: "ok", later: "warn", na: "neutral" };
 const anchor = (code: string) => `regra-${code}`;
 
@@ -24,11 +22,10 @@ export default async function ScenariosPage({ params }: { params: Promise<{ id: 
   const [edits, bases] = await Promise.all([listEdits(analysis.id), latestBaseRuns()]);
   const premissas = run.timelineSnapshot.premissas;
   const base = premissas ? bases.get(analysis.id) : undefined;
-  const baseDate = new Map(base?.result.map((r) => [r.ruleCode, r.aplicavel ? r.dataProjetada : null]) ?? []);
+  const baseDate = base && new Map(base.result.map((r) => [r.ruleCode, r.aplicavel ? r.dataProjetada : null]));
   const stale = edits.some((e) => e.editedAt > run.createdAt);
   const first = earliest(run.result);
   const best = bestValue(run.result);
-  const hoje = run.result.filter((r) => r.aplicavel && r.elegivelHoje);
   const ordered = inDisplayOrder(run.result);
   const reportUrl = `/analises/${analysis.id}/cenarios/${run.id}/relatorio`;
   const petitionUrl = (code: string) => `/analises/${analysis.id}/cenarios/${run.id}/peticao?regra=${code}`;
@@ -38,7 +35,7 @@ export default async function ScenariosPage({ params }: { params: Promise<{ id: 
       <PageHeader
         crumbs={[{ href: "/", label: "Painel" }, { href: "/analises", label: "Análises" }, { href: `/analises/${analysis.id}`, label: analysis.clientLabel }]}
         title={premissas ? `Simulação de planejamento · nº ${run.id}` : `Cenários de aposentadoria · cálculo nº ${run.id}`}
-        sub={`Referência ${brDate(run.referenceDate)} · calculado em ${dateTime.format(run.createdAt)} · ${premissas ? `projeção com contribuições só até ${brDate(premissas.contribuicaoAte)}` : "projeção supõe contribuição contínua a partir da referência"}`}
+        sub={`Referência ${brDate(run.referenceDate)} · calculado em ${brDateTime(run.createdAt)} · ${premissas ? `projeção com contribuições só até ${brDate(premissas.contribuicaoAte)}` : "projeção supõe contribuição contínua a partir da referência"}`}
         actions={
           <>
             <ReexecutarButton runId={run.id} />
@@ -70,63 +67,8 @@ export default async function ScenariosPage({ params }: { params: Promise<{ id: 
           </div>
         )}
 
-        <section className="highlights" aria-label="Destaques">
-          <div className="highlight">
-            <span className="eyebrow">Elegível hoje</span>
-            <span className="v">{hoje.length ? hoje.map((r) => r.nome).join(", ") : "Nenhuma regra"}</span>
-            <span className="muted small">{hoje.length ? "Pode pedir o benefício já." : "Veja abaixo quando cada regra é atingida."}</span>
-          </div>
-          <div className="highlight">
-            <span className="eyebrow">Primeira regra atingida</span>
-            <span className="v">{first ? first.nome : "—"}</span>
-            <span className="muted small">{first ? `${verdict(first).text} · ${waitText(run.referenceDate, first.dataProjetada)}` : "Nenhuma regra atingida no horizonte."}</span>
-          </div>
-          <div className="highlight">
-            <span className="eyebrow">Maior valor estimado</span>
-            <span className="v">{best?.rmi ? `${rmiValue(best.rmi)} · ${best.nome}` : "—"}</span>
-            <span className="muted small">{best ? `${verdict(best).text}. Mais cedo nem sempre é mais vantajoso.` : "Este cálculo não estimou o valor do benefício."}</span>
-          </div>
-        </section>
-
-        <section className="card" id="comparativo">
-          <div className="card-header">
-            <h2 className="card-title">Comparativo das regras</h2>
-            <span className="muted small">clique numa regra para ver requisitos e a origem de cada número</span>
-          </div>
-          <div className="scroll-x">
-            <table className="table compare">
-              <thead>
-                <tr><th>Regra</th><th>Situação</th><th>Data</th>{base && <th>Com contribuição contínua</th>}<th>Espera</th><th className="num">Valor estimado</th><th>Requisitos</th><th></th></tr>
-              </thead>
-              <tbody>
-                {ordered.map((r) => {
-                  const v = verdict(r);
-                  const met = r.requisitos.filter((q) => q.atendido).length;
-                  return (
-                    <tr key={r.ruleCode} className={`${r === first ? "is-best-date" : ""} ${r === best ? "is-best-value" : ""}`}>
-                      <td>
-                        <a className="row-link" href={`#${anchor(r.ruleCode)}`} style={{ color: "var(--ink)", fontWeight: 600, textDecoration: "none" }}>{r.nome}</a>
-                        <div className="muted small">{r.legalBasis} · v{r.version}</div>
-                        <div className="row" style={{ gap: 4, marginTop: 2 }}>
-                          {r === first && <Badge tone="info">mais cedo</Badge>}
-                          {r === best && <Badge tone="ok">maior valor</Badge>}
-                        </div>
-                      </td>
-                      <td><Badge tone={VERDICT_TONE[v.kind]}>{v.kind === "yes" ? "Elegível hoje" : v.kind === "later" ? "Elegível no futuro" : v.text}</Badge></td>
-                      <td className="nowrap tabular">{r.aplicavel && r.dataProjetada ? brDate(r.dataProjetada) : r.aplicavel ? "Não atinge" : "—"}</td>
-                      {base && <td className="nowrap tabular muted">{compareText(baseDate.get(r.ruleCode) ?? null, r.aplicavel ? r.dataProjetada : null)}</td>}
-                      <td className="nowrap">{r.aplicavel ? waitText(run.referenceDate, r.dataProjetada) : "—"}</td>
-                      <td className="num nowrap">{r.rmi ? rmiValue(r.rmi) : "—"}</td>
-                      <td className="nowrap">{r.requisitos.length ? `${met} de ${r.requisitos.length}` : "—"}</td>
-                      <td className="nowrap">{r.aplicavel && <a href={petitionUrl(r.ruleCode)} target="_blank" rel="noopener" className="button button-ghost button-sm">Minuta</a>}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="card-footer"><p className="muted small">{RMI_RESSALVA}</p></div>
-        </section>
+        <Highlights results={run.result} referencia={run.referenceDate} first={first} best={best} />
+        <CompareTable ordered={ordered} first={first} best={best} baseDate={baseDate} referencia={run.referenceDate} petitionUrl={petitionUrl} />
 
         <section className="card">
           <div className="card-header">
@@ -148,6 +90,73 @@ export default async function ScenariosPage({ params }: { params: Promise<{ id: 
         </p>
       </div>
     </>
+  );
+}
+
+function Highlights({ results, referencia, first, best }: { results: Resultado[]; referencia: string; first?: Resultado; best?: Resultado }) {
+  const hoje = results.filter((r) => r.aplicavel && r.elegivelHoje);
+  return (
+    <section className="highlights" aria-label="Destaques">
+      <div className="highlight">
+        <span className="eyebrow">Elegível hoje</span>
+        <span className="v">{hoje.length ? hoje.map((r) => r.nome).join(", ") : "Nenhuma regra"}</span>
+        <span className="muted small">{hoje.length ? "Pode pedir o benefício já." : "Veja abaixo quando cada regra é atingida."}</span>
+      </div>
+      <div className="highlight">
+        <span className="eyebrow">Primeira regra atingida</span>
+        <span className="v">{first ? first.nome : "—"}</span>
+        <span className="muted small">{first ? `${verdict(first).text} · ${waitText(referencia, first.dataProjetada)}` : "Nenhuma regra atingida no horizonte."}</span>
+      </div>
+      <div className="highlight">
+        <span className="eyebrow">Maior valor estimado</span>
+        <span className="v">{best?.rmi ? `${rmiValue(best.rmi)} · ${best.nome}` : "—"}</span>
+        <span className="muted small">{best ? `${verdict(best).text}. Mais cedo nem sempre é mais vantajoso.` : "Este cálculo não estimou o valor do benefício."}</span>
+      </div>
+    </section>
+  );
+}
+
+function CompareTable({ ordered, first, best, baseDate, referencia, petitionUrl }: { ordered: Resultado[]; first?: Resultado; best?: Resultado; baseDate?: Map<string, string | null>; referencia: string; petitionUrl: (code: string) => string }) {
+  return (
+    <section className="card" id="comparativo">
+      <div className="card-header">
+        <h2 className="card-title">Comparativo das regras</h2>
+        <span className="muted small">clique numa regra para ver requisitos e a origem de cada número</span>
+      </div>
+      <div className="scroll-x">
+        <table className="table compare">
+          <thead>
+            <tr><th>Regra</th><th>Situação</th><th>Data</th>{baseDate && <th>Com contribuição contínua</th>}<th>Espera</th><th className="num">Valor estimado</th><th>Requisitos</th><th></th></tr>
+          </thead>
+          <tbody>
+            {ordered.map((r) => {
+              const v = verdict(r);
+              const met = r.requisitos.filter((q) => q.atendido).length;
+              return (
+                <tr key={r.ruleCode} className={`${r === first ? "is-best-date" : ""} ${r === best ? "is-best-value" : ""}`}>
+                  <td>
+                    <a className="row-link" href={`#${anchor(r.ruleCode)}`} style={{ color: "var(--ink)", fontWeight: 600, textDecoration: "none" }}>{r.nome}</a>
+                    <div className="muted small">{r.legalBasis} · v{r.version}</div>
+                    <div className="row" style={{ gap: 4, marginTop: 2 }}>
+                      {r === first && <Badge tone="info">mais cedo</Badge>}
+                      {r === best && <Badge tone="ok">maior valor</Badge>}
+                    </div>
+                  </td>
+                  <td><Badge tone={VERDICT_TONE[v.kind]}>{v.kind === "yes" ? "Elegível hoje" : v.kind === "later" ? "Elegível no futuro" : v.text}</Badge></td>
+                  <td className="nowrap tabular">{r.aplicavel && r.dataProjetada ? brDate(r.dataProjetada) : r.aplicavel ? "Não atinge" : "—"}</td>
+                  {baseDate && <td className="nowrap tabular muted">{compareText(baseDate.get(r.ruleCode) ?? null, r.aplicavel ? r.dataProjetada : null)}</td>}
+                  <td className="nowrap">{r.aplicavel ? waitText(referencia, r.dataProjetada) : "—"}</td>
+                  <td className="num nowrap">{r.rmi ? rmiValue(r.rmi) : "—"}</td>
+                  <td className="nowrap">{r.requisitos.length ? `${met} de ${r.requisitos.length}` : "—"}</td>
+                  <td className="nowrap">{r.aplicavel && <a href={petitionUrl(r.ruleCode)} target="_blank" rel="noopener" className="button button-ghost button-sm">Minuta</a>}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="card-footer"><p className="muted small">{RMI_RESSALVA}</p></div>
+    </section>
   );
 }
 

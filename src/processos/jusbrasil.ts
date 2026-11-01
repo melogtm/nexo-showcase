@@ -5,13 +5,13 @@ import { type Movimento, type Parte, ProcessoError, type ProcessoProvider, type 
 //   Authorization: Bearer <token>
 // The token comes from JUSBRASIL_API_TOKEN (a paid Jusbrasil Soluções contract). Never log it or the response (personal data).
 
-export const JUSBRASIL_BASE_URL = process.env.JUSBRASIL_API_URL ?? "https://op.digesto.com.br/api";
+const BASE_URL = "https://op.digesto.com.br/api";
 
 export function jusbrasilProvider(token: string, fetchImpl: typeof fetch = fetch): ProcessoProvider {
   return {
     fonte: "JUSBRASIL",
     async fetch(numeroCnj) {
-      const url = `${JUSBRASIL_BASE_URL}/base-judicial/tribproc/${encodeURIComponent(numeroCnj)}?tipo_numero=5`;
+      const url = `${BASE_URL}/base-judicial/tribproc/${encodeURIComponent(numeroCnj)}?tipo_numero=5`;
       let res: Response;
       try {
         res = await fetchImpl(url, {
