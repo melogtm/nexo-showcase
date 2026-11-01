@@ -30,11 +30,16 @@ This Next.js has breaking changes compared with most training data. Check `node_
 ```bash
 npm run dev            # http://localhost:3000, login nexo/nexo, data in ./.pglite
 npm test               # Vitest; every test file gets an in-memory PGlite, migrated
+npm run test:coverage  # same, plus the backend coverage gate (vitest.config.ts)
+NEXO_COVERAGE=1 npm run build && npm run e2e   # Playwright, fresh .pglite-e2e, src/app coverage gate (e2e/coverage.ts)
+npm run smoke -- <url> # read-only GET of every main page (CI after E2E; postdeploy on prod)
 npm run lint && npx tsc --noEmit
 npm run doctor         # react-doctor (telemetry off)
 npm run eval:h1        # H1 metric on the public sample; -- <pdf> <key.json> for others
 npm run db:generate    # after editing src/db/schema.ts → new SQL file in drizzle/
 ```
+
+**CI gate** (`.github/workflows/ci.yml`, the `ci` check the `main` ruleset requires): lint, tsc, unit coverage, `eval:h1`, migrations append-only, schema/migration drift, build, react-doctor, E2E with coverage on Postgres, smoke. Coverage gates are ratchets: raise a floor in the PR that adds tests, **never lower one**, and never edit a committed migration to make a guard pass. New UI flows get a spec in `e2e/` (pt-BR role/label locators). `postdeploy.yml` smokes prod after each deploy; `nightly-neon.yml` runs E2E on an expiring Neon branch.
 
 ## Architecture
 The core is **pure functions**. The database and the UI are thin shells around it.

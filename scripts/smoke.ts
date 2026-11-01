@@ -1,34 +1,9 @@
-// npm run smoke -- <baseUrl>   read-only: logs in with NEXO_USER/NEXO_PASSWORD and GETs every main page. Safe on prod.
-// npm run smoke -- --seed      writes a synthetic dataset to the local PGlite (refuses when DATABASE_URL is set).
+// npm run smoke -- <baseUrl>  read-only: logs in with NEXO_USER/NEXO_PASSWORD and GETs every main page. Safe on prod.
 // Exits 1 on the first page that does not answer 200, so CI and post-deploy checks can gate on it.
-import { readFileSync } from "node:fs";
 import { createSession, credentials, SESSION_COOKIE } from "@/auth";
 
 const arg = process.argv[2];
-if (!arg) throw new Error("Uso: npm run smoke -- <baseUrl> | --seed");
-
-if (arg === "--seed") {
-  if (process.env.DATABASE_URL) throw new Error("--seed only writes to the local PGlite: unset DATABASE_URL.");
-  const { today } = await import("@/format");
-  const { ingest } = await import("@/ingestion/ingest");
-  const { demoNumbers } = await import("@/processos/demo");
-  const { importProcesso, moveProcesso, syncAll } = await import("@/processos/store");
-  const { createRun } = await import("@/scenarios/store");
-  const { recordEdits } = await import("@/timeline/review");
-
-  const pdf = (f: string) => new Uint8Array(readFileSync(`public/${f}`));
-  const { id } = await ingest("Smoke · perto de se aposentar", pdf("cnis-exemplo-sintetico-2.pdf"));
-  await ingest("Smoke · com pendências", pdf("cnis-exemplo-sintetico.pdf"));
-  await recordEdits(id, [{ target: "filiado", field: "sexo", oldValue: null, newValue: "F", justificativa: null, editedBy: "smoke" }]);
-  await createRun(id, today());
-  await createRun(id, today(), { contribuicaoAte: "2099-12-31" });
-  const ids = [];
-  for (const [i, numero] of demoNumbers(4, 7).entries()) ids.push(await importProcesso({ numero, clientLabel: `Smoke ${i + 1}`, analysisId: i === 0 ? id : null }));
-  await moveProcesso(ids[1], "RECURSO", "smoke", "smoke test");
-  await syncAll();
-  console.log(`seeded: analyses, 2 runs, ${ids.length} processos`);
-  process.exit(0);
-}
+if (!arg) throw new Error("Uso: npm run smoke -- <baseUrl>");
 
 const base = arg.replace(/\/$/, "");
 const creds = credentials();

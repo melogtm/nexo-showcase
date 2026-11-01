@@ -73,12 +73,14 @@ Try it with the synthetic samples: [`public/cnis-exemplo-sintetico.pdf`](public/
 | Command | What it does |
 |---|---|
 | `npm test` | Vitest, each file on a fresh in-memory database |
+| `npm run test:coverage` | Same, with the backend coverage gate (`vitest.config.ts`) |
+| `NEXO_COVERAGE=1 npm run build && npm run e2e` | Playwright on every flow (fresh `.pglite-e2e`), with the `src/app` coverage gate (`e2e/coverage.ts`) |
 | `npm run lint && npx tsc --noEmit` | Lint and type-check |
 | `npm run eval:h1` | H1 extraction metric on the public sample |
 | `npm run db:generate` | New SQL migration after editing `src/db/schema.ts` |
-| `npm run smoke -- <url>` | Logs in and GETs every main page (read-only, safe on prod); `-- --seed` fills the local PGlite first. CI runs both |
+| `npm run smoke -- <url>` | Logs in and GETs every main page (read-only, safe on prod) |
 
-**After a prod deploy:** `NEXO_PASSWORD=<prod password> npm run smoke -- https://<domain>`. Then check by hand what needs a browser or writes data: drag a card and reload, *Voltar ao automático*, *Sincronizar*, upload a CNIS and *Calcular cenários*, *Reexecutar e comparar*.
+**Automatic checks.** Every PR runs the `ci` job (required by the `main` ruleset): lint, types, unit tests with coverage, H1, the migration guards, build, react-doctor, the Playwright suite on a Postgres container with coverage, and the smoke. After each production deploy, `postdeploy` smokes the live site (needs the `PROD_URL` variable and the `NEXO_PROD_PASSWORD` secret). Every night, `nightly-neon` runs the suite on a Neon branch that expires after an hour (needs `NEON_API_KEY` and `NEON_PROJECT_ID`).
 
 ## Stack
 

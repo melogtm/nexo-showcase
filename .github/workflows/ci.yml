@@ -5,11 +5,19 @@ on:
     branches: [main]
 permissions:
   contents: read
+# One job on purpose: the protect-main ruleset requires the `ci` check. Every gate below must pass before a PR (an agent's included) can merge.
 jobs:
   ci:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: nexo }
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 2s --health-timeout 5s --health-retries 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { fetch-depth: 0 } # the migration guard diffs against origin/main
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
@@ -19,14 +27,47 @@ jobs:
       - run: npm audit --audit-level=high
       - run: npm run lint
       - run: npx tsc --noEmit
-      - run: npm test
-      - run: npm run build
-      - run: npm run doctor -- --blocking warning
-      # Renders every main page of the built app on a seeded PGlite (seed first: one process per PGlite dir).
-      - name: smoke
-        env: { NEXO_PASSWORD: ci }
+      # Unit tests on in-memory PGlite (DATABASE_URL unset), with the backend coverage gate in vitest.config.ts.
+      - run: npm run test:coverage
+      # H1: exits 1 on a silent extraction error.
+      - run: npm run eval:h1
+      - name: migrations are append-only (invariant 8)
         run: |
-          npm run smoke -- --seed
+          changed=$(git diff --diff-filter=MDR --name-only origin/main...HEAD -- drizzle/ ':!drizzle/meta/_journal.json') # the journal grows with every new migration
+          if [ -n "$changed" ]; then echo "Committed migrations were modified, deleted or renamed:"; echo "$changed"; exit 1; fi
+      - name: schema and migrations in sync
+        run: |
+          npx drizzle-kit generate
+          if [ -n "$(git status --porcelain drizzle/)" ]; then echo "src/db/schema.ts changed without a migration: run npm run db:generate and commit it."; git status --porcelain drizzle/; exit 1; fi
+      # NEXO_COVERAGE=1 adds browser source maps for the E2E coverage report; Vercel's prod build doesn't set it.
+      - run: npm run build
+        env: { NEXO_COVERAGE: "1" }
+      - run: npm run doctor -- --blocking warning
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      # Same driver and migrator as Vercel/Neon (postgres-js + drizzle-kit), on a throwaway container.
+      - run: npm run db:migrate
+        env: { DATABASE_URL: "postgres://postgres:postgres@localhost:5432/nexo" }
+      # Browser tests of every flow, with the frontend coverage gate in e2e/coverage.ts.
+      - run: npm run e2e
+        env: { E2E_DATABASE_URL: "postgres://postgres:postgres@localhost:5432/nexo", NEXO_PASSWORD: ci }
+      # The prod smoke script, on the data the E2E run left behind, so it can't rot between deploys.
+      - name: smoke
+        env: { DATABASE_URL: "postgres://postgres:postgres@localhost:5432/nexo", NEXO_PASSWORD: ci }
+        run: |
           npm start &
           for i in $(seq 1 30); do curl -sf -o /dev/null http://localhost:3000/login && break; sleep 1; done
           npm run smoke -- http://localhost:3000
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-report
+          path: |
+            playwright-report/
+            test-results/
+            !test-results/.auth/
+            coverage/
+          retention-days: 7

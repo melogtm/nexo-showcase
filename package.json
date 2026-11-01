@@ -12,7 +12,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "eval:h1": "NODE_ENV=test tsx scripts/eval-h1.ts",
-    "smoke": "tsx scripts/smoke.ts"
+    "smoke": "tsx scripts/smoke.ts",
+    "test:coverage": "vitest run --coverage",
+    "e2e": "tsx e2e/run.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.11",
@@ -25,12 +27,15 @@
     "temporal-polyfill": "^1.0.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/node": "^22.20.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^5.0.5",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
+    "monocart-coverage-reports": "^3.2.0",
     "pdf-lib": "^1.17.1",
     "react-doctor": "^0.9.14",
     "tsx": "^4.23.15",
