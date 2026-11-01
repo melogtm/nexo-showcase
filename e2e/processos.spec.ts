@@ -9,7 +9,7 @@ test.use({ viewport: { width: 1680, height: 1000 } });
 test("the empty board loads the demo lawsuits", async ({ page }) => {
   await page.goto("/processos");
   await page.getByRole("button", { name: "Carregar 8 processos de exemplo" }).click();
-  await expect(page.locator("article.kcard")).toHaveCount(8);
+  await expect(page.locator("article.kcard")).toHaveCount(7); // DELIBERATE FAILURE: artifact upload check
 });
 
 const NUMERO = buildCnj("0004242", "2024", "4", "03", "6301");
