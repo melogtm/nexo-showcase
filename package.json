@@ -15,7 +15,7 @@
     "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.5.11",
+    "@electric-sql/pglite": "^0.5.14",
     "drizzle-orm": "^0.45.3",
     "next": "16.4.3",
     "pdfjs-dist": "^6.3.289",
@@ -32,7 +32,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "pdf-lib": "^1.17.1",
-    "react-doctor": "^0.9.14",
+    "react-doctor": "^0.9.19",
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.2"
