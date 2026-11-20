@@ -50,6 +50,7 @@ async function get(path: string, { auth = true, expect = [200] } = {}) {
 const first = (html: string, re: RegExp) => re.exec(html)?.[1];
 
 await get("/login", { auth: false });
+await get("/sobre", { auth: false }); // public pitch page
 await get("/", { auth: false, expect: [307] }); // the session check is on
 await get("/api/cron/sincronizar-processos", { auth: false, expect: [401, 503] }); // closed: never sends the secret, so no paid sync runs
 await get("/");

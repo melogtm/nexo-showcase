@@ -4,7 +4,7 @@ import { SESSION_COOKIE, credentials, isValidSession } from "@/auth";
 export function proxy(request: NextRequest) {
   const creds = credentials();
   if (!creds) return new NextResponse("NEXO_PASSWORD is not set.", { status: 503 });
-  if (request.nextUrl.pathname === "/login" || isValidSession(creds, request.cookies.get(SESSION_COOKIE)?.value)) {
+  if (["/login", "/sobre"].includes(request.nextUrl.pathname) || isValidSession(creds, request.cookies.get(SESSION_COOKIE)?.value)) {
     return NextResponse.next();
   }
   return NextResponse.redirect(new URL("/login", request.url));

@@ -469,6 +469,33 @@ details.section[open] > summary::after { content: "▾"; }
 .login-panel { display: grid; place-content: center; gap: 24px; padding: 32px 16px; justify-items: center; }
 .login-panel form { width: min(320px, 100%); }
 @media (max-width: 800px) { .login { grid-template-columns: 1fr; } .login-brand { gap: 16px; } }
+.login-brand a { color: inherit; font-weight: 600; }
+
+/* ───────── Sobre (public pitch page; the only place the brand red fills a block besides login) ───────── */
+.pitch-hero { display: grid; gap: 28px; padding: 20px clamp(16px, 5vw, 64px) clamp(48px, 8vw, 96px); background: #c22d2d; color: #fff; }
+.pitch-hero .mark { color: inherit; }
+.pitch-hero .display { font: 400 clamp(64px, 11vw, 136px)/0.9 var(--font-serif), Georgia, serif; letter-spacing: -0.03em; }
+.pitch-hero .display em { display: block; font-size: 0.42em; }
+.pitch-lead { max-width: 52ch; font-size: clamp(16px, 1.6vw, 19px); }
+.button-light { color: #c22d2d; background: #fff; }
+.button-light:hover { background: #fbeeee; }
+.button-outline-light { color: #fff; background: transparent; border-color: rgb(255 255 255 / 60%); }
+.button-outline-light:hover { background: rgb(255 255 255 / 12%); }
+.pitch-section { display: grid; gap: 20px; max-width: 1200px; margin: 0 auto; padding: clamp(36px, 6vw, 64px) clamp(16px, 5vw, 64px) 0; scroll-margin-top: 16px; }
+.pitch-title { font: 400 clamp(32px, 4.5vw, 52px)/1 var(--font-serif), Georgia, serif; letter-spacing: -0.02em; }
+.pitch-title em { color: var(--red); }
+.pitch-rule { position: relative; width: 96px; height: 1px; background: var(--red); }
+.pitch-rule::after { content: ""; position: absolute; right: -3px; top: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+.pitch-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); align-items: stretch; }
+.pitch-grid > .card { align-content: start; }
+.pitch-grid h3 { font-size: 15px; font-weight: 650; }
+.pitch-step { font: 400 40px/1 var(--font-serif), Georgia, serif; color: var(--red); }
+.plan .card-body { height: 100%; grid-template-rows: auto auto auto 1fr auto; padding: 20px; }
+.plan.is-featured { border-color: var(--red); box-shadow: var(--shadow); }
+.pitch-grid .plan-name { font: 400 32px/1 var(--font-serif), Georgia, serif; }
+.plan-price strong { font-size: 32px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.plan-price span { color: var(--muted); }
+.pitch-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; max-width: 1200px; margin: 48px auto 0; padding: 20px clamp(16px, 5vw, 64px) 32px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
